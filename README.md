@@ -112,3 +112,71 @@ If iOS pods are not installed yet, run this first from the `ios` directory:
 ```bash
 pod install
 ```
+
+## Available Scripts
+
+| Command | Purpose |
+| --- | --- |
+| `npm run start` | Start the Metro bundler |
+| `npm run android` | Build and launch the Android app |
+| `npm run ios` | Build and launch the iOS app |
+| `npm run test` | Run the Jest test suite |
+| `npm run lint` | Run ESLint across TypeScript source files |
+
+## Supported Exercises
+
+FitCounter currently supports three exercise types:
+
+- Push-ups: tracks elbow extension and body-line form.
+- Sit-ups: tracks hip angle and knee-position consistency.
+- Squats: tracks lower-body movement using the exercise logic in `src/core/exercises`.
+
+Each exercise has a dedicated rule module so thresholds, ideal ranges, and form feedback can be adjusted without rewriting the camera or UI layers.
+
+## Permissions
+
+The app requests these Android permissions:
+
+- `CAMERA` for live pose tracking.
+- `PACKAGE_USAGE_STATS` for blocked-app violation detection.
+- `FOREGROUND_SERVICE` and `FOREGROUND_SERVICE_SPECIAL_USE` for the monitoring service.
+- `POST_NOTIFICATIONS` for Android notification support.
+- `INTERNET` for standard React Native development and runtime networking.
+
+On Android, usage access is a protected permission and must be enabled manually in system settings for app-monitoring behavior to work.
+
+## Development Notes
+
+- Keep movement algorithms inside `src/core` whenever possible.
+- Keep UI-specific code inside `src/components` and `src/screens`.
+- Use Zustand stores for cross-screen exercise and focus-session state.
+- Prefer pure functions for scoring, angle calculation, smoothing, and rep detection.
+- Native pose detection code lives under the Android and iOS project folders.
+
+## Troubleshooting
+
+If the camera does not open, confirm that device camera permission is granted and that the app is running on a real device or an emulator with camera support.
+
+If app blocking does not trigger on Android, enable usage access for FitCounter from system settings and restart the focus session.
+
+If native builds fail after dependency changes, clean the platform build output and reinstall dependencies:
+
+```bash
+npm install
+```
+
+For Android, you can also clean Gradle from the `android` directory:
+
+```bash
+./gradlew clean
+```
+
+For iOS, reinstall pods from the `ios` directory:
+
+```bash
+pod install
+```
+
+## Documentation
+
+For a deeper explanation of the movement pipeline, scoring model, and system design decisions, see `ARCHITECTURE.md`.
