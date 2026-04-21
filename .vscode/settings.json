@@ -1,4 +1,3 @@
 {
-    "java.compile.nullAnalysis.mode": "automatic",
-    "files.trimTrailingWhitespace": true
+    "java.compile.nullAnalysis.mode": "automatic"
 }
