@@ -1,4 +1,5 @@
 import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
 import {
   GoogleSignin,
   isErrorWithCode,
@@ -28,6 +29,20 @@ export function initializeAuth() {
   authUnsubscribe = auth().onAuthStateChanged((user) => {
     useAuthStore.getState().setUser(user);
     useAuthStore.getState().setInitializing(false);
+    if (user) {
+      firestore()
+        .collection('users')
+        .doc(user.uid)
+        .set(
+          {
+            uid: user.uid,
+            displayName: user.displayName ?? user.email?.split('@')[0] ?? 'Anonymous',
+            email: user.email ?? '',
+          },
+          { merge: true },
+        )
+        .catch((e) => console.warn('[authService] Firestore profile write failed:', e));
+    }
   });
 
   return () => {

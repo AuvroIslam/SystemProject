@@ -115,4 +115,8 @@ export type RootStackParamList = {
   PunishExercise: { targetReps: number; exerciseType: ExerciseType; setsToPayOff: number };
   DebtPay: undefined;
   FocusSummary: undefined;
+  Leaderboard: undefined;
+  Fitness: undefined;
+  AskAI: undefined;
+  Profile: undefined;
 };

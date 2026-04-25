@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -11,7 +12,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { C, SHADOW } from '../theme/atelier';
 import { isGoogleAuthConfigured } from '../config/auth';
 import {
   signInWithEmail,
@@ -19,6 +19,7 @@ import {
   signUpWithEmail,
   toAuthErrorMessage,
 } from '../services/authService';
+import { D, SP, R, SH } from '../theme/design';
 
 type AuthMode = 'signin' | 'signup';
 
@@ -35,34 +36,17 @@ export function AuthScreen() {
 
   async function handleEmailAuth() {
     setError(null);
-
-    if (!email.trim() || !password) {
-      setError('Email and password are required.');
-      return;
-    }
-
+    if (!email.trim() || !password) { setError('Email and password are required.'); return; }
     if (isSignup) {
-      if (password.length < 6) {
-        setError('Password should be at least 6 characters.');
-        return;
-      }
-
-      if (password !== confirmPassword) {
-        setError('Passwords do not match.');
-        return;
-      }
+      if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
+      if (password !== confirmPassword) { setError('Passwords do not match.'); return; }
     }
-
     setIsLoading(true);
-
     try {
-      if (isSignup) {
-        await signUpWithEmail(email, password);
-      } else {
-        await signInWithEmail(email, password);
-      }
-    } catch (authError) {
-      setError(toAuthErrorMessage(authError));
+      if (isSignup) await signUpWithEmail(email, password);
+      else await signInWithEmail(email, password);
+    } catch (e) {
+      setError(toAuthErrorMessage(e));
     } finally {
       setIsLoading(false);
     }
@@ -71,11 +55,10 @@ export function AuthScreen() {
   async function handleGoogleAuth() {
     setError(null);
     setIsLoading(true);
-
     try {
       await signInWithGoogle();
-    } catch (authError) {
-      setError(toAuthErrorMessage(authError));
+    } catch (e) {
+      setError(toAuthErrorMessage(e));
     } finally {
       setIsLoading(false);
     }
@@ -83,51 +66,38 @@ export function AuthScreen() {
 
   return (
     <SafeAreaView style={s.safe}>
-      <KeyboardAvoidingView
-        style={s.flex}
-        behavior={Platform.OS === 'android' ? undefined : 'padding'}>
-        <ScrollView
-          contentContainerStyle={s.scroll}
-          keyboardShouldPersistTaps="handled">
-          <Text style={s.label}>AUTHENTICATION</Text>
-          <Text style={s.headline}>
-            {isSignup ? 'Create your account' : 'Welcome back'}
-          </Text>
-          <Text style={s.subhead}>
-            Sign in to use focus tracking, rep counting, and your personal training flow.
-          </Text>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
-          <View style={s.switchRow}>
-            <TouchableOpacity
-              style={[s.switchBtn, !isSignup && s.switchBtnActive]}
-              onPress={() => {
-                setMode('signin');
-                setError(null);
-              }}
-              activeOpacity={0.85}>
-              <Text style={[s.switchText, !isSignup && s.switchTextActive]}>
-                SIGN IN
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.switchBtn, isSignup && s.switchBtnActive]}
-              onPress={() => {
-                setMode('signup');
-                setError(null);
-              }}
-              activeOpacity={0.85}>
-              <Text style={[s.switchText, isSignup && s.switchTextActive]}>
-                SIGN UP
-              </Text>
-            </TouchableOpacity>
+          {/* ── Branding ── */}
+          <View style={s.brandRow}>
+            <Image source={require('../../Elements/Onboarding.png')} style={s.brandImg} resizeMode="contain" />
+          </View>
+          <Text style={s.appName}>FitCounter</Text>
+          <Text style={s.tagline}>Focus. Train. Conquer.</Text>
+
+          {/* ── Mode toggle ── */}
+          <View style={s.toggle}>
+            {(['signin', 'signup'] as AuthMode[]).map((m) => (
+              <TouchableOpacity
+                key={m}
+                style={[s.toggleBtn, mode === m && s.toggleBtnOn]}
+                onPress={() => { setMode(m); setError(null); }}
+                activeOpacity={0.8}>
+                <Text style={[s.toggleText, mode === m && s.toggleTextOn]}>
+                  {m === 'signin' ? 'Sign In' : 'Sign Up'}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
+          {/* ── Card ── */}
           <View style={s.card}>
             <Text style={s.inputLabel}>EMAIL</Text>
             <TextInput
               style={s.input}
               placeholder="you@example.com"
-              placeholderTextColor={C.outline}
+              placeholderTextColor={D.textLight}
               autoCapitalize="none"
               keyboardType="email-address"
               value={email}
@@ -139,7 +109,7 @@ export function AuthScreen() {
             <TextInput
               style={s.input}
               placeholder="Minimum 6 characters"
-              placeholderTextColor={C.outline}
+              placeholderTextColor={D.textLight}
               secureTextEntry
               value={password}
               onChangeText={setPassword}
@@ -152,7 +122,7 @@ export function AuthScreen() {
                 <TextInput
                   style={s.input}
                   placeholder="Re-enter password"
-                  placeholderTextColor={C.outline}
+                  placeholderTextColor={D.textLight}
                   secureTextEntry
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
@@ -163,42 +133,33 @@ export function AuthScreen() {
 
             {error && (
               <View style={s.errorBox}>
-                <Text style={s.errorText}>{error}</Text>
+                <Text style={s.errorText}>⚠️  {error}</Text>
               </View>
             )}
 
             <TouchableOpacity
-              style={[s.primaryBtn, isLoading && s.btnDisabled]}
+              style={[s.primaryBtn, isLoading && s.btnOff]}
               onPress={handleEmailAuth}
               disabled={isLoading}
-              activeOpacity={0.85}>
-              {isLoading ? (
-                <ActivityIndicator color={C.onPrimary} />
-              ) : (
-                <Text style={s.primaryBtnText}>
-                  {isSignup ? 'CREATE ACCOUNT' : 'SIGN IN WITH EMAIL'}
-                </Text>
-              )}
+              activeOpacity={0.8}>
+              {isLoading
+                ? <ActivityIndicator color={D.onPrimary} />
+                : <Text style={s.primaryBtnText}>{isSignup ? 'Create Account' : 'Sign In'}</Text>}
             </TouchableOpacity>
 
-            <View style={s.dividerRow}>
-              <View style={s.divider} />
-              <Text style={s.dividerText}>OR</Text>
-              <View style={s.divider} />
+            <View style={s.divRow}>
+              <View style={s.divLine} />
+              <Text style={s.divText}>or</Text>
+              <View style={s.divLine} />
             </View>
 
             <TouchableOpacity
-              style={[
-                s.googleBtn,
-                (!googleReady || isLoading) && s.btnDisabled,
-              ]}
+              style={[s.googleBtn, (!googleReady || isLoading) && s.btnOff]}
               onPress={handleGoogleAuth}
               disabled={!googleReady || isLoading}
-              activeOpacity={0.85}>
+              activeOpacity={0.8}>
               <Text style={s.googleBtnText}>
-                {googleReady
-                  ? 'CONTINUE WITH GOOGLE'
-                  : 'ADD WEB CLIENT ID TO ENABLE GOOGLE'}
+                {googleReady ? 'Continue with Google' : 'Google Sign-In Not Configured'}
               </Text>
             </TouchableOpacity>
 
@@ -208,6 +169,7 @@ export function AuthScreen() {
               </Text>
             )}
           </View>
+
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -215,147 +177,47 @@ export function AuthScreen() {
 }
 
 const s = StyleSheet.create({
-  flex: { flex: 1 },
-  safe: { flex: 1, backgroundColor: C.surface },
-  scroll: {
-    padding: 24,
-    paddingTop: 48,
-    paddingBottom: 72,
-  },
-  label: {
-    color: C.secondary,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2.5,
-    marginBottom: 8,
-  },
-  headline: {
-    color: C.primaryContainer,
-    fontSize: 32,
-    fontWeight: '800',
-    lineHeight: 38,
-  },
-  subhead: {
-    color: C.onSurfaceVariant,
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 10,
-    marginBottom: 28,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    backgroundColor: C.surfaceContainerLow,
-    borderRadius: 16,
-    padding: 6,
-    marginBottom: 18,
-  },
-  switchBtn: {
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  switchBtnActive: {
-    backgroundColor: C.primaryContainer,
-  },
-  switchText: {
-    color: C.onSurfaceVariant,
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1.4,
-  },
-  switchTextActive: {
-    color: C.onPrimary,
-  },
-  card: {
-    backgroundColor: C.surfaceContainerLowest,
-    borderRadius: 20,
-    padding: 20,
-    ...SHADOW.card,
-  },
-  inputLabel: {
-    color: C.onSurfaceVariant,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.8,
-    marginBottom: 8,
-    marginTop: 14,
-  },
+  safe:   { flex: 1, backgroundColor: D.bg },
+  scroll: { paddingHorizontal: SP.xl, paddingTop: SP.xxxl, paddingBottom: 72 },
+
+  brandRow: { alignItems: 'center', marginBottom: SP.xl },
+  brandImg: { width: 160, height: 140 },
+  appName:  { fontSize: 32, fontWeight: '900', color: D.primary, textAlign: 'center', marginBottom: SP.xs },
+  tagline:  { fontSize: 14, color: D.textMuted, textAlign: 'center', marginBottom: SP.xxl, fontWeight: '600' },
+
+  toggle:      { flexDirection: 'row', backgroundColor: D.card, borderRadius: R.pill, padding: 4, marginBottom: SP.xl, ...SH.soft },
+  toggleBtn:   { flex: 1, borderRadius: R.pill, paddingVertical: 12, alignItems: 'center' },
+  toggleBtnOn: { backgroundColor: D.primary, ...SH.button },
+  toggleText:  { color: D.textMuted, fontSize: 14, fontWeight: '700' },
+  toggleTextOn:{ color: D.onPrimary },
+
+  card: { backgroundColor: D.card, borderRadius: R.cardLg, padding: SP.xl, ...SH.card },
+
+  inputLabel: { color: D.textMuted, fontSize: 11, fontWeight: '800', letterSpacing: 1.8, marginBottom: SP.sm, marginTop: SP.base },
   input: {
-    backgroundColor: C.surfaceContainerLow,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: C.outlineVariant,
-    color: C.onSurface,
+    backgroundColor: D.bg,
+    borderRadius: R.md,
+    borderWidth: 1.5,
+    borderColor: D.border,
+    color: D.text,
     fontSize: 15,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: SP.base,
+    paddingVertical: SP.md,
   },
-  errorBox: {
-    backgroundColor: C.errorContainer,
-    borderRadius: 12,
-    padding: 14,
-    marginTop: 16,
-  },
-  errorText: {
-    color: C.onErrorContainer,
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  primaryBtn: {
-    backgroundColor: C.primaryContainer,
-    borderRadius: 14,
-    paddingVertical: 17,
-    alignItems: 'center',
-    marginTop: 20,
-    ...SHADOW.button,
-    shadowColor: C.primaryContainer,
-  },
-  primaryBtnText: {
-    color: C.onPrimary,
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-  },
-  googleBtn: {
-    backgroundColor: C.surfaceContainerLow,
-    borderRadius: 14,
-    paddingVertical: 17,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: C.outlineVariant,
-  },
-  googleBtnText: {
-    color: C.primaryContainer,
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 1.1,
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginVertical: 18,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: C.outlineVariant,
-  },
-  dividerText: {
-    color: C.onSurfaceVariant,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1.4,
-  },
-  helperText: {
-    color: C.onSurfaceVariant,
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 12,
-    textAlign: 'center',
-  },
-  btnDisabled: {
-    opacity: 0.6,
-  },
+
+  errorBox:  { backgroundColor: D.dangerLight, borderRadius: R.md, padding: SP.base, marginTop: SP.base, borderLeftWidth: 3, borderLeftColor: D.danger },
+  errorText: { color: D.danger, fontSize: 13, lineHeight: 19 },
+
+  primaryBtn:     { backgroundColor: D.primary, borderRadius: R.pill, paddingVertical: 17, alignItems: 'center', marginTop: SP.xl, ...SH.button },
+  primaryBtnText: { color: D.onPrimary, fontSize: 15, fontWeight: '800', letterSpacing: 0.5 },
+
+  divRow:  { flexDirection: 'row', alignItems: 'center', gap: SP.sm, marginVertical: SP.lg },
+  divLine: { flex: 1, height: 1, backgroundColor: D.border },
+  divText: { color: D.textMuted, fontSize: 12, fontWeight: '600' },
+
+  googleBtn:     { backgroundColor: D.bg, borderRadius: R.pill, paddingVertical: 15, alignItems: 'center', borderWidth: 1.5, borderColor: D.border },
+  googleBtnText: { color: D.text, fontSize: 14, fontWeight: '700' },
+
+  helperText: { color: D.textMuted, fontSize: 12, lineHeight: 18, marginTop: SP.md, textAlign: 'center' },
+  btnOff:     { opacity: 0.5 },
 });

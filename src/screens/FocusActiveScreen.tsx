@@ -1,23 +1,25 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
-  StyleSheet,
-  View,
-  Text,
   Alert,
-  TouchableOpacity,
-  SafeAreaView,
-  NativeModules,
   NativeEventEmitter,
-  AppState,
+  NativeModules,
+  SafeAreaView,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/pose';
 import { useFocusStore, AVAILABLE_APPS } from '../store/focusStore';
-import { C, SHADOW } from '../theme/atelier';
+import { Card } from '../components/ui/Card';
+import { StatItem } from '../components/ui/StatItem';
+import { ProgressBar } from '../components/ui/ProgressBar';
+import { D, SP, R, SH } from '../theme/design';
 
 const { AppMonitor } = NativeModules;
-const monitorEmitter = new NativeEventEmitter(AppMonitor);
+const monitorEmitter = AppMonitor ? new NativeEventEmitter(AppMonitor) : null;
 
 type Props = NativeStackScreenProps<RootStackParamList, 'FocusActive'>;
 
@@ -36,6 +38,7 @@ function getAppLabel(pkg: string): string {
 export function FocusActiveScreen({ navigation }: Props) {
   const {
     sessionEndTime,
+    timerMinutes,
     blockedApps,
     violations,
     softPenaltyPushups,
@@ -49,51 +52,38 @@ export function FocusActiveScreen({ navigation }: Props) {
     Math.max(0, (sessionEndTime ?? 0) - Date.now()),
   );
 
-  // Countdown timer
+  // Countdown
   useEffect(() => {
     const interval = setInterval(() => {
       const r = Math.max(0, (sessionEndTime ?? 0) - Date.now());
       setRemaining(r);
-      if (r <= 0) {
-        clearInterval(interval);
-        endSession();
-      }
+      if (r <= 0) { clearInterval(interval); endSession(); }
     }, 1000);
     return () => clearInterval(interval);
   }, [sessionEndTime, endSession]);
 
-  // Start native monitoring
+  // Native monitoring
   useEffect(() => {
     AppMonitor.startMonitoring(blockedApps);
-    return () => {
-      AppMonitor.stopMonitoring();
-    };
+    return () => { AppMonitor.stopMonitoring(); };
   }, [blockedApps]);
 
-  // Intercept restricted app attempts and ask user whether to proceed.
+  // Restricted app intercept
   useEffect(() => {
+    if (!monitorEmitter) return;
     const sub = monitorEmitter.addListener('onRestrictedAppAttempt', (event: { packageName: string }) => {
-      const packageName = event.packageName;
-      const appLabel = getAppLabel(packageName);
-
+      const appLabel = getAppLabel(event.packageName);
       Alert.alert(
         'Restricted App',
-        `You tried to open ${appLabel}. Proceeding will add 1 pushup session (10 pushups).`,
+        `You tried to open ${appLabel}. Proceeding adds 1 pushup session.`,
         [
-          {
-            text: 'Stay Focused',
-            style: 'cancel',
-          },
+          { text: 'Stay Focused', style: 'cancel' },
           {
             text: 'Proceed',
             style: 'destructive',
             onPress: async () => {
-              addProceedPenalty(packageName);
-              try {
-                await AppMonitor.proceedToRestrictedApp(packageName);
-              } catch {
-                // no-op; penalty is already applied by confirmed action
-              }
+              addProceedPenalty(event.packageName);
+              try { await AppMonitor.proceedToRestrictedApp(event.packageName); } catch {}
             },
           },
         ],
@@ -102,18 +92,13 @@ export function FocusActiveScreen({ navigation }: Props) {
     return () => sub.remove();
   }, [addProceedPenalty]);
 
-  // When state becomes "warning", navigate to warning screen
+  // State transitions
   useEffect(() => {
-    if (sessionState === 'warning') {
-      navigation.navigate('ViolationWarning');
-    }
+    if (sessionState === 'warning') navigation.navigate('ViolationWarning');
   }, [sessionState, navigation]);
 
-  // When state becomes "completed", navigate to focus summary
   useEffect(() => {
-    if (sessionState === 'completed') {
-      navigation.replace('FocusSummary');
-    }
+    if (sessionState === 'completed') navigation.replace('FocusSummary');
   }, [sessionState, navigation]);
 
   const handleGiveUp = useCallback(() => {
@@ -122,64 +107,62 @@ export function FocusActiveScreen({ navigation }: Props) {
   }, [endSession]);
 
   const progress = sessionEndTime
-    ? 1 - remaining / (useFocusStore.getState().timerMinutes * 60 * 1000)
+    ? 1 - remaining / (timerMinutes * 60 * 1000)
     : 0;
 
-  // Circular progress ring constants
-  const RING_SIZE = 200;
-  const RING_STROKE = 6;
+  const totalMs = timerMinutes * 60 * 1000;
+  const elapsed = totalMs - remaining;
 
   return (
     <SafeAreaView style={s.safe}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        {/* ── Header ── */}
-        <Text style={s.label}>SESSION IN PROGRESS</Text>
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* ── Timer Ring ── */}
-        <View style={s.ringContainer}>
-          <View style={s.ringOuter}>
-            {/* Simple progress bar inside a circle aesthetic */}
-            <View style={s.ringInner}>
-              <Text style={s.timer}>{formatTime(remaining)}</Text>
+        {/* ── Header ── */}
+        <Text style={s.tag}>FOCUS SESSION</Text>
+        <Text style={s.title}>Stay Focused</Text>
+
+        {/* ── Timer ring ── */}
+        <View style={s.timerBlock}>
+          <View style={s.timerRing}>
+            <View style={s.timerInner}>
+              <Text style={s.timerValue}>{formatTime(remaining)}</Text>
               <Text style={s.timerHint}>remaining</Text>
             </View>
           </View>
-          {/* Linear progress underneath */}
-          <View style={s.progressBar}>
-            <View
-              style={[s.progressFill, { width: `${Math.min(progress * 100, 100)}%` }]}
-            />
-          </View>
-        </View>
-
-        {/* ── Stats Row ── */}
-        <View style={s.statsRow}>
-          <View style={s.statCard}>
-            <Text style={s.statValue}>{violations.length}</Text>
-            <Text style={s.statLabel}>VIOLATIONS</Text>
-          </View>
-          <View style={[s.statCard, s.statCardAccent]}>
-            <Text style={[s.statValue, { color: C.error }]}>{pendingSets}</Text>
-            <Text style={s.statLabel}>SETS DUE</Text>
-          </View>
-          <View style={s.statCard}>
-            <Text style={s.statValue}>{softPenaltyPushups}</Text>
-            <Text style={s.statLabel}>+1 PUSHUPS</Text>
-          </View>
-        </View>
-
-        {/* ── Restricted Apps ── */}
-        <View style={s.card}>
-          <Text style={s.cardTitle}>RESTRICTED APPS</Text>
-          <Text style={s.cardBody}>
-            {blockedApps.map(getAppLabel).join('  ·  ')}
+          <ProgressBar
+            progress={progress}
+            color={D.primary}
+            height={8}
+            style={s.timerProgress}
+          />
+          <Text style={s.timerElapsed}>
+            {Math.round(elapsed / 60000)} / {timerMinutes} min elapsed
           </Text>
         </View>
 
-        {/* ── Violation Log ── */}
+        {/* ── Stats ── */}
+        <View style={s.statsRow}>
+          <StatItem value={violations.length} label="Violations"  color={violations.length > 0 ? D.danger : D.accent} />
+          <StatItem value={pendingSets}        label="Sets Due"   color={pendingSets > 0 ? D.danger : D.text} accent={pendingSets > 0} />
+          <StatItem value={softPenaltyPushups} label="Pushups +" />
+        </View>
+
+        {/* ── Restricted apps ── */}
+        <Card style={s.card}>
+          <Text style={s.cardTitle}>RESTRICTED APPS</Text>
+          <View style={s.appChips}>
+            {blockedApps.map((pkg) => (
+              <View key={pkg} style={s.appChip}>
+                <Text style={s.appChipText}>{getAppLabel(pkg)}</Text>
+              </View>
+            ))}
+          </View>
+        </Card>
+
+        {/* ── Violation log ── */}
         {violations.length > 0 && (
-          <View style={s.card}>
-            <Text style={[s.cardTitle, { color: C.error }]}>VIOLATION LOG</Text>
+          <Card style={s.card}>
+            <Text style={[s.cardTitle, { color: D.danger }]}>VIOLATION LOG</Text>
             {violations.slice(-5).map((v, i) => (
               <View key={i} style={s.logRow}>
                 <Text style={s.logApp}>{getAppLabel(v.packageName)}</Text>
@@ -188,158 +171,59 @@ export function FocusActiveScreen({ navigation }: Props) {
                 </View>
               </View>
             ))}
-          </View>
+          </Card>
         )}
 
-        {/* ── End Session ── */}
-        <TouchableOpacity
-          style={s.endBtn}
-          onPress={handleGiveUp}
-          activeOpacity={0.8}>
-          <Text style={s.endBtnText}>END SESSION</Text>
+        {/* ── End session ── */}
+        <TouchableOpacity style={s.endBtn} onPress={handleGiveUp} activeOpacity={0.75}>
+          <Text style={s.endBtnText}>End Session</Text>
         </TouchableOpacity>
+
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-/* ───────────── Styles ───────────── */
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.surface },
-  scroll: { padding: 24, paddingBottom: 72 },
+  safe:   { flex: 1, backgroundColor: D.bg },
+  scroll: { paddingHorizontal: SP.xl, paddingBottom: 72, paddingTop: SP.lg },
 
-  label: {
-    color: C.secondary,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2.5,
-    textAlign: 'center',
-    marginTop: 20,
-    marginBottom: 24,
-  },
+  tag:   { fontSize: 11, fontWeight: '800', color: D.primary, letterSpacing: 2, marginBottom: SP.xs },
+  title: { fontSize: 26, fontWeight: '800', color: D.text, marginBottom: SP.xl },
 
-  /* Timer ring */
-  ringContainer: { alignItems: 'center', marginBottom: 32 },
-  ringOuter: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    borderWidth: 5,
-    borderColor: C.surfaceContainerHigh,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: C.surfaceContainerLow,
-    marginBottom: 16,
+  // Timer
+  timerBlock:    { alignItems: 'center', marginBottom: SP.xl },
+  timerRing:     {
+    width: 200, height: 200, borderRadius: 100,
+    backgroundColor: D.primaryLight,
+    borderWidth: 6, borderColor: D.primary,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: SP.lg,
+    ...SH.card,
   },
-  ringInner: { alignItems: 'center' },
-  timer: {
-    color: C.primaryContainer,
-    fontSize: 48,
-    fontWeight: '900',
-    fontVariant: ['tabular-nums'],
-  },
-  timerHint: {
-    color: C.onSurfaceVariant,
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  progressBar: {
-    width: '80%',
-    height: 4,
-    backgroundColor: C.surfaceContainerHigh,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: C.secondary,
-    borderRadius: 2,
-  },
+  timerInner:    { alignItems: 'center' },
+  timerValue:    { fontSize: 44, fontWeight: '900', color: D.primary, fontVariant: ['tabular-nums'] },
+  timerHint:     { fontSize: 12, color: D.textMuted, fontWeight: '600', marginTop: 2 },
+  timerProgress: { width: '80%' },
+  timerElapsed:  { fontSize: 12, color: D.textMuted, marginTop: SP.sm },
 
-  /* Stats row */
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: C.surfaceContainerLow,
-    borderRadius: 14,
-    padding: 16,
-    alignItems: 'center',
-  },
-  statCardAccent: {
-    borderLeftWidth: 3,
-    borderLeftColor: C.error,
-  },
-  statValue: {
-    color: C.primaryContainer,
-    fontSize: 26,
-    fontWeight: '900',
-  },
-  statLabel: {
-    color: C.onSurfaceVariant,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-    marginTop: 4,
-  },
+  // Stats
+  statsRow: { flexDirection: 'row', gap: SP.md, marginBottom: SP.lg },
 
-  /* Cards */
-  card: {
-    backgroundColor: C.surfaceContainerLow,
-    borderRadius: 14,
-    padding: 18,
-    marginBottom: 14,
-  },
-  cardTitle: {
-    color: C.onSurfaceVariant,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 2,
-    marginBottom: 10,
-  },
-  cardBody: {
-    color: C.onSurface,
-    fontSize: 13,
-    lineHeight: 20,
-  },
+  // Cards
+  card:      { marginBottom: SP.md },
+  cardTitle: { fontSize: 10, fontWeight: '800', color: D.textMuted, letterSpacing: 2, marginBottom: SP.md },
 
-  /* Log */
-  logRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  logApp: { color: C.onSurface, fontSize: 14, fontWeight: '600' },
-  logBadge: {
-    backgroundColor: C.errorContainer,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  logBadgeText: {
-    color: C.onErrorContainer,
-    fontSize: 11,
-    fontWeight: '700',
-  },
+  appChips: { flexDirection: 'row', flexWrap: 'wrap', gap: SP.sm },
+  appChip:  { backgroundColor: D.primaryLight, borderRadius: R.pill, paddingHorizontal: 14, paddingVertical: 6 },
+  appChipText: { color: D.primary, fontSize: 13, fontWeight: '600' },
 
-  /* End button */
-  endBtn: {
-    borderWidth: 2,
-    borderColor: C.outlineVariant,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  endBtnText: {
-    color: C.error,
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
+  logRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SP.sm },
+  logApp:      { fontSize: 14, fontWeight: '600', color: D.text },
+  logBadge:    { backgroundColor: D.dangerLight, borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 3 },
+  logBadgeText:{ color: D.danger, fontSize: 11, fontWeight: '700' },
+
+  // End button
+  endBtn:     { borderWidth: 2, borderColor: D.border, borderRadius: R.pill, paddingVertical: 14, alignItems: 'center', marginTop: SP.sm },
+  endBtnText: { color: D.danger, fontSize: 14, fontWeight: '700', letterSpacing: 0.5 },
 });

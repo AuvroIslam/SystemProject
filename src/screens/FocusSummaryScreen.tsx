@@ -1,16 +1,22 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
-  StyleSheet,
-  View,
-  Text,
-  TouchableOpacity,
+  Image,
   SafeAreaView,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/pose';
 import { useFocusStore, AVAILABLE_APPS } from '../store/focusStore';
-import { C, SHADOW } from '../theme/atelier';
+import { useAuthStore } from '../store/authStore';
+import { useXPStore } from '../store/xpStore';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { ProgressBar } from '../components/ui/ProgressBar';
+import { D, SP, R, SH } from '../theme/design';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'FocusSummary'>;
 
@@ -20,10 +26,21 @@ function getAppLabel(pkg: string): string {
 
 export function FocusSummaryScreen({ navigation }: Props) {
   const { timerMinutes, violations, pendingSets, resetSession } = useFocusStore();
+  const user = useAuthStore((s) => s.user);
+  const { addXP } = useXPStore();
+  const xpAwarded = useRef(false);
 
   const totalViolations = violations.length;
   const clean = totalViolations === 0;
   const pct = clean ? 100 : Math.max(0, Math.round(100 - totalViolations * 15));
+
+  useEffect(() => {
+    if (!user || xpAwarded.current) return;
+    xpAwarded.current = true;
+    let xp = 50;
+    if (clean) xp += 30;
+    addXP(user.uid, xp);
+  }, [user, addXP, clean]);
 
   const handleDone = () => {
     resetSession();
@@ -32,258 +49,138 @@ export function FocusSummaryScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={s.safe}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        {/* Header */}
-        <Text style={s.label}>SESSION COMPLETE</Text>
-        <Text style={s.headline}>
-          {clean ? 'Perfect Focus' : 'Session Report'}
-        </Text>
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Score ring area */}
-        <View style={s.scoreBlock}>
-          <View style={s.scoreCircle}>
-            <Text style={s.scorePct}>{pct}%</Text>
-            <Text style={s.scoreHint}>focus score</Text>
-          </View>
-          <View style={s.statusBadge}>
-            <Text style={s.statusText}>
-              {clean ? 'ELITE' : pct >= 70 ? 'GOOD' : 'NEEDS WORK'}
-            </Text>
-          </View>
-        </View>
+        {/* Illustration */}
+        <Image
+          source={clean
+            ? require('../../Elements/SuccessReward.png')
+            : require('../../Elements/SomeThingWrong.png')}
+          style={s.illustration}
+          resizeMode="contain"
+        />
 
-        {/* Progress bar */}
-        <View style={s.progressBar}>
-          <View style={[s.progressFill, { width: `${pct}%` }]} />
-        </View>
+        {/* Tag + title */}
+        <Text style={s.tag}>SESSION COMPLETE</Text>
+        <Text style={s.headline}>{clean ? 'Perfect Focus! 🎉' : 'Session Report'}</Text>
+
+        {/* Score card */}
+        <Card style={s.scoreCard} padding={SP.xl}>
+          <View style={s.scoreRow}>
+            <View style={s.scoreCircle}>
+              <Text style={s.scorePct}>{pct}%</Text>
+              <Text style={s.scoreHint}>focus</Text>
+            </View>
+            <View style={{ flex: 1, paddingLeft: SP.lg }}>
+              <View style={[s.gradeBadge, { backgroundColor: clean ? D.accentLight : pct >= 70 ? D.primaryLight : D.dangerLight }]}>
+                <Text style={[s.gradeText, { color: clean ? D.accentDark : pct >= 70 ? D.primary : D.danger }]}>
+                  {clean ? 'ELITE' : pct >= 70 ? 'GOOD' : 'NEEDS WORK'}
+                </Text>
+              </View>
+              <ProgressBar progress={pct / 100} color={clean ? D.accent : D.primary} height={8} style={{ marginTop: SP.md }} />
+            </View>
+          </View>
+        </Card>
 
         {/* Stats row */}
         <View style={s.statsRow}>
-          <View style={s.statCard}>
-            <Text style={s.statValue}>{timerMinutes}m</Text>
-            <Text style={s.statLabel}>DURATION</Text>
-          </View>
-          <View style={s.statCard}>
-            <Text style={[s.statValue, { color: clean ? C.secondary : C.error }]}>
-              {totalViolations}
-            </Text>
-            <Text style={s.statLabel}>VIOLATIONS</Text>
-          </View>
-          <View style={s.statCard}>
-            <Text style={[s.statValue, { color: C.secondary }]}>
-              {pendingSets}
-            </Text>
-            <Text style={s.statLabel}>SETS DUE</Text>
-          </View>
+          {[
+            { val: `${timerMinutes}m`, label: 'DURATION' },
+            { val: totalViolations,  label: 'VIOLATIONS', danger: !clean },
+            { val: pendingSets,      label: 'SETS DUE',   danger: pendingSets > 0 },
+          ].map(({ val, label, danger }) => (
+            <View key={label} style={s.statCard}>
+              <Text style={[s.statVal, danger && { color: D.danger }]}>{val}</Text>
+              <Text style={s.statLabel}>{label}</Text>
+            </View>
+          ))}
         </View>
 
-        {/* Violation breakdown */}
+        {/* XP earned */}
+        <Card style={s.xpCard} variant="primary" padding={SP.lg}>
+          <View style={s.xpRow}>
+            <Text style={s.xpIcon}>⚡</Text>
+            <View>
+              <Text style={s.xpTitle}>XP Earned</Text>
+              <Text style={s.xpAmount}>+{clean ? 80 : 50} XP</Text>
+            </View>
+          </View>
+        </Card>
+
+        {/* Violations breakdown */}
         {totalViolations > 0 && (
-          <View style={s.card}>
-            <Text style={s.cardTitle}>SESSION ANALYTICS</Text>
+          <Card style={s.card}>
+            <Text style={s.cardTitle}>VIOLATION BREAKDOWN</Text>
             {violations.map((v, i) => (
               <View key={i} style={s.logRow}>
-                <View style={s.logNum}>
-                  <Text style={s.logNumText}>{i + 1}</Text>
-                </View>
+                <View style={s.logNum}><Text style={s.logNumText}>{i + 1}</Text></View>
                 <Text style={s.logApp}>{getAppLabel(v.packageName)}</Text>
-                <View style={s.logBadge}>
-                  <Text style={s.logBadgeText}>+1 set</Text>
-                </View>
+                <View style={s.logBadge}><Text style={s.logBadgeText}>+1 set</Text></View>
               </View>
             ))}
-          </View>
+          </Card>
         )}
 
         {/* Message */}
-        <View style={s.msgCard}>
+        <Card style={s.msgCard} variant="muted" padding={SP.lg}>
           <Text style={s.msgText}>
             {clean
-              ? 'Amazing discipline! Your focus is your superpower.'
-              : totalViolations <= 2
-                ? `You have ${pendingSets} set${pendingSets !== 1 ? 's' : ''} to pay off from your home screen.`
-                : `${totalViolations} violations — ${pendingSets} set${pendingSets !== 1 ? 's' : ''} due. Time to pay your debt.`}
+              ? 'Amazing discipline! Your focus is your superpower. Keep it up! 💪'
+              : pendingSets > 0
+                ? `You have ${pendingSets} set${pendingSets !== 1 ? 's' : ''} to pay off. Head to the Home screen to clear your debt.`
+                : 'Violations noted. Work on holding focus for longer next time.'}
           </Text>
-        </View>
+        </Card>
 
-        <TouchableOpacity
-          style={s.doneBtn}
-          onPress={handleDone}
-          activeOpacity={0.8}>
-          <Text style={s.doneBtnText}>DONE</Text>
-        </TouchableOpacity>
+        <Button label="Done" onPress={handleDone} variant="primary" fullWidth />
+
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-/* ───────────── Styles ───────────── */
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.surface },
-  scroll: { padding: 24, paddingBottom: 72, alignItems: 'center' },
+  safe:   { flex: 1, backgroundColor: D.bg },
+  scroll: { paddingHorizontal: SP.xl, paddingBottom: 72, alignItems: 'center' },
 
-  /* Header */
-  label: {
-    color: C.secondary,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2.5,
-    marginTop: 20,
-    marginBottom: 6,
-  },
-  headline: {
-    color: C.primaryContainer,
-    fontSize: 30,
-    fontWeight: '800',
-    marginBottom: 28,
-  },
+  illustration: { width: 180, height: 160, marginTop: SP.xl, marginBottom: SP.md },
 
-  /* Score ring */
-  scoreBlock: { alignItems: 'center', marginBottom: 20 },
-  scoreCircle: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    borderWidth: 5,
-    borderColor: C.surfaceContainerHigh,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: C.surfaceContainerLow,
-    marginBottom: 12,
-  },
-  scorePct: {
-    color: C.primaryContainer,
-    fontSize: 40,
-    fontWeight: '900',
-  },
-  scoreHint: {
-    color: C.onSurfaceVariant,
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  statusBadge: {
-    backgroundColor: C.primaryContainer,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 5,
-  },
-  statusText: {
-    color: C.onPrimary,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-  },
+  tag:      { fontSize: 11, fontWeight: '800', color: D.primary, letterSpacing: 2, marginBottom: SP.xs },
+  headline: { fontSize: 28, fontWeight: '800', color: D.text, marginBottom: SP.xl, textAlign: 'center' },
 
-  /* Progress bar */
-  progressBar: {
-    width: '100%',
-    height: 4,
-    backgroundColor: C.surfaceContainerHigh,
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginBottom: 24,
+  scoreCard: { width: '100%', marginBottom: SP.lg },
+  scoreRow:  { flexDirection: 'row', alignItems: 'center' },
+  scoreCircle:{
+    width: 96, height: 96, borderRadius: 48,
+    borderWidth: 5, borderColor: D.primary,
+    backgroundColor: D.primaryLight,
+    alignItems: 'center', justifyContent: 'center',
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: C.secondary,
-    borderRadius: 2,
-  },
+  scorePct:  { fontSize: 26, fontWeight: '900', color: D.primary },
+  scoreHint: { fontSize: 10, color: D.textMuted, fontWeight: '600' },
+  gradeBadge:{ alignSelf: 'flex-start', borderRadius: R.pill, paddingHorizontal: 16, paddingVertical: 6 },
+  gradeText: { fontSize: 12, fontWeight: '800', letterSpacing: 1.5 },
 
-  /* Stats */
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    width: '100%',
-    marginBottom: 20,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: C.surfaceContainerLow,
-    borderRadius: 14,
-    padding: 16,
-    alignItems: 'center',
-  },
-  statValue: {
-    color: C.primaryContainer,
-    fontSize: 26,
-    fontWeight: '900',
-  },
-  statLabel: {
-    color: C.onSurfaceVariant,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-    marginTop: 4,
-  },
+  statsRow:  { flexDirection: 'row', gap: SP.md, width: '100%', marginBottom: SP.lg },
+  statCard:  { flex: 1, backgroundColor: D.card, borderRadius: R.md, padding: SP.base, alignItems: 'center', ...SH.soft },
+  statVal:   { fontSize: 24, fontWeight: '900', color: D.text },
+  statLabel: { fontSize: 9, fontWeight: '800', color: D.textMuted, letterSpacing: 1.5, marginTop: 4 },
 
-  /* Card */
-  card: {
-    backgroundColor: C.surfaceContainerLow,
-    borderRadius: 14,
-    padding: 18,
-    width: '100%',
-    marginBottom: 16,
-  },
-  cardTitle: {
-    color: C.onSurfaceVariant,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 2,
-    marginBottom: 12,
-  },
-  logRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    gap: 10,
-  },
-  logNum: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: C.primaryContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logNumText: { color: C.onPrimary, fontSize: 11, fontWeight: '800' },
-  logApp: { color: C.onSurface, fontSize: 14, fontWeight: '600', flex: 1 },
-  logBadge: {
-    backgroundColor: C.errorContainer,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  logBadgeText: { color: C.onErrorContainer, fontSize: 11, fontWeight: '700' },
+  xpCard: { width: '100%', marginBottom: SP.lg },
+  xpRow:  { flexDirection: 'row', alignItems: 'center', gap: SP.lg },
+  xpIcon: { fontSize: 32 },
+  xpTitle:{ fontSize: 13, color: D.primary, fontWeight: '600' },
+  xpAmount:{ fontSize: 28, fontWeight: '900', color: D.primary },
 
-  /* Message */
-  msgCard: {
-    backgroundColor: C.surfaceContainerLow,
-    borderRadius: 14,
-    padding: 18,
-    width: '100%',
-    marginBottom: 24,
-    borderLeftWidth: 3,
-    borderLeftColor: C.secondary,
-  },
-  msgText: {
-    color: C.onSurfaceVariant,
-    fontSize: 14,
-    lineHeight: 21,
-  },
+  card:     { width: '100%', marginBottom: SP.lg },
+  cardTitle:{ fontSize: 10, fontWeight: '800', color: D.textMuted, letterSpacing: 2, marginBottom: SP.md },
+  logRow:   { flexDirection: 'row', alignItems: 'center', marginBottom: SP.sm, gap: SP.sm },
+  logNum:   { width: 22, height: 22, borderRadius: 11, backgroundColor: D.primary, alignItems: 'center', justifyContent: 'center' },
+  logNumText:{ color: D.onPrimary, fontSize: 11, fontWeight: '800' },
+  logApp:   { flex: 1, fontSize: 14, fontWeight: '600', color: D.text },
+  logBadge: { backgroundColor: D.dangerLight, borderRadius: R.pill, paddingHorizontal: 8, paddingVertical: 3 },
+  logBadgeText:{ color: D.danger, fontSize: 11, fontWeight: '700' },
 
-  /* Done button */
-  doneBtn: {
-    backgroundColor: C.primaryContainer,
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 64,
-    ...SHADOW.button,
-    shadowColor: C.primaryContainer,
-  },
-  doneBtnText: {
-    color: C.onPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
+  msgCard: { width: '100%', marginBottom: SP.xl },
+  msgText: { color: D.textMuted, fontSize: 14, lineHeight: 21 },
 });

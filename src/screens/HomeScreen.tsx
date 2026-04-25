@@ -1,346 +1,228 @@
 import React from 'react';
 import {
-  StyleSheet,
-  View,
-  Text,
-  TouchableOpacity,
+  Image,
   SafeAreaView,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList, ExerciseType } from '../types/pose';
 import { signOutUser } from '../services/authService';
 import { useAuthStore } from '../store/authStore';
 import { useFocusStore } from '../store/focusStore';
-import { C, SHADOW } from '../theme/atelier';
+import { useXPStore } from '../store/xpStore';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { ProgressBar } from '../components/ui/ProgressBar';
+import { BottomNav } from '../components/ui/BottomNav';
+import { AVATARS } from '../components/ui/AvatarSelector';
+import { useAvatarStore } from '../store/avatarStore';
+import { D, SP, R, SH } from '../theme/design';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
+
+const EXERCISES: { type: ExerciseType; label: string; img: any }[] = [
+  { type: 'pushup', label: 'Push-ups', img: require('../../Elements/pushup.png') },
+  { type: 'situp',  label: 'Sit-ups',  img: require('../../Elements/situps.png') },
+  { type: 'squat',  label: 'Squats',   img: require('../../Elements/squats.png') },
+];
 
 export function HomeScreen({ navigation }: Props) {
   const pendingSets = useFocusStore((s) => s.pendingSets);
   const user = useAuthStore((s) => s.user);
+  const { xp, level } = useXPStore();
+  const { selectedIndex } = useAvatarStore();
+  const xpProgress = (xp % 100) / 100;
+  const displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Athlete';
 
-  const go = (type: ExerciseType) =>
-    navigation.navigate('Exercise', { exerciseType: type });
+  const go = (type: ExerciseType) => navigation.navigate('Exercise', { exerciseType: type });
 
   return (
     <SafeAreaView style={s.safe}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        <Text style={s.label}>SUBMISSION</Text>
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        <View style={s.accountRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.accountName}>
-              {user?.displayName ?? 'Authenticated Athlete'}
-            </Text>
-            <Text style={s.accountEmail}>{user?.email ?? 'Signed in'}</Text>
+
+        {/* ── Top Bar ── */}
+        <View style={s.topBar}>
+          <TouchableOpacity onPress={() => navigation.navigate('Profile')} activeOpacity={0.8} style={s.avatarBtn}>
+            <View style={s.avatarWrap}>
+              <Image source={AVATARS[selectedIndex]} style={s.avatar} resizeMode="cover" />
+            </View>
+          </TouchableOpacity>
+
+          <View style={s.topMid}>
+            <Text style={s.greeting}>Hello, {displayName.split(' ')[0]} 👋</Text>
+            <View style={s.levelRow}>
+              <View style={s.levelBadge}>
+                <Text style={s.levelText}>Lv {level}</Text>
+              </View>
+              <Text style={s.xpText}>{xp} XP</Text>
+            </View>
           </View>
+
           <TouchableOpacity
-            style={s.signOutBtn}
-            onPress={signOutUser}
+            style={s.notifBtn}
+            onPress={() => navigation.navigate('Leaderboard')}
             activeOpacity={0.8}>
-            <Text style={s.signOutText}>LOG OUT</Text>
+            <Image source={require('../../Elements/Icon(trophy).png')} style={s.notifIcon} resizeMode="contain" />
           </TouchableOpacity>
         </View>
 
-        <Text style={s.headline}>Your Performance{'\n'}Dashboard</Text>
-        <Text style={s.subhead}>
-          Focus. Train. Conquer procrastination through discipline.
-        </Text>
-
-        {pendingSets > 0 && (
-          <View style={s.debtCard}>
-            <View style={s.debtTop}>
-              <View style={s.debtBadge}>
-                <Text style={s.debtBadgeText}>PENDING</Text>
-              </View>
-              <Text style={s.debtBig}>{pendingSets}</Text>
-              <Text style={s.debtUnit}>
-                set{pendingSets !== 1 ? 's' : ''} due
-              </Text>
-              <Text style={s.debtHint}>Violation debt - pay it off now</Text>
-            </View>
-            <TouchableOpacity
-              style={s.debtBtn}
-              onPress={() => navigation.navigate('DebtPay')}
-              activeOpacity={0.8}>
-              <Text style={s.debtBtnText}>COMPLETE SETS</Text>
-            </TouchableOpacity>
+        {/* ── XP Progress ── */}
+        <Card style={s.xpCard} padding={16}>
+          <View style={s.xpRow}>
+            <Text style={s.xpLabel}>Progress to Level {level + 1}</Text>
+            <Text style={s.xpRight}>{xp % 100} / 100 XP</Text>
           </View>
+          <ProgressBar progress={xpProgress} color={D.primary} height={8} style={{ marginTop: 8 }} />
+        </Card>
+
+        {/* ── Debt Alert ── */}
+        {pendingSets > 0 && (
+          <Card style={s.debtCard} padding={20} shadow>
+            <View style={s.debtRow}>
+              <View style={{ flex: 1 }}>
+                <View style={s.debtBadge}>
+                  <Text style={s.debtBadgeText}>DEBT DUE</Text>
+                </View>
+                <Text style={s.debtNum}>{pendingSets}</Text>
+                <Text style={s.debtUnit}>set{pendingSets !== 1 ? 's' : ''} pending</Text>
+              </View>
+              <Image source={require('../../Elements/pushup.png')} style={s.debtImg} />
+            </View>
+            <Button
+              label="Pay Off Debt →"
+              onPress={() => navigation.navigate('DebtPay')}
+              variant="danger"
+              fullWidth
+              style={{ marginTop: 12 }}
+            />
+          </Card>
         )}
 
+        {/* ── Focus Card ── */}
         <TouchableOpacity
           style={s.focusCard}
           onPress={() => navigation.navigate('FocusSetup')}
           activeOpacity={0.85}>
-          <View style={s.focusInner}>
-            <View style={s.focusDot} />
-            <View style={{ flex: 1 }}>
-              <Text style={s.focusTitle}>Start Focus Session</Text>
-              <Text style={s.focusDesc}>
-                Set a timer and block apps. Opening a blocked app creates exercise debt.
-              </Text>
+          <View style={s.focusContent}>
+            <Text style={s.focusTag}>FOCUS MODE</Text>
+            <Text style={s.focusTitle}>Start a Focus{'\n'}Session</Text>
+            <Text style={s.focusDesc}>Block distractions. Build discipline.</Text>
+            <View style={s.focusBtn}>
+              <Text style={s.focusBtnText}>Let's Go →</Text>
             </View>
           </View>
-          <View style={s.focusArrow}>
-            <Text style={s.focusArrowText}>→</Text>
-          </View>
+          <Image source={require('../../Elements/FocusMode.png')} style={s.focusImg} />
         </TouchableOpacity>
 
-        <Text style={s.sectionLabel}>PRACTICE DIRECTLY</Text>
-
-        <View style={s.bentoRow}>
-          <TouchableOpacity
-            style={[s.bentoCard, s.bentoPrimary]}
-            onPress={() => go('pushup')}
-            activeOpacity={0.85}>
-            <Text style={s.bentoEmoji}>💪</Text>
-            <Text style={s.bentoTitleLight}>Push-ups</Text>
-          </TouchableOpacity>
-
-          <View style={s.bentoCol}>
+        {/* ── Quick Start ── */}
+        <Text style={s.sectionTitle}>Quick Start</Text>
+        <View style={s.exerciseRow}>
+          {EXERCISES.map(({ type, label, img }) => (
             <TouchableOpacity
-              style={[s.bentoCard, s.bentoSmall]}
-              onPress={() => go('situp')}
-              activeOpacity={0.85}>
-              <Text style={s.bentoEmoji}>🏋️</Text>
-              <Text style={s.bentoTitleDark}>Sit-ups</Text>
+              key={type}
+              style={s.exCard}
+              onPress={() => go(type)}
+              activeOpacity={0.8}>
+              <Image source={img} style={s.exImg} resizeMode="contain" />
+              <Text style={s.exLabel}>{label}</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[s.bentoCard, s.bentoSmallAlt]}
-              onPress={() => go('squat')}
-              activeOpacity={0.85}>
-              <Text style={s.bentoEmoji}>🦵</Text>
-              <Text style={s.bentoTitleDark}>Squats</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={s.howCard}>
-          <Text style={s.howTitle}>How it works</Text>
-          {[
-            'Tap "Start Focus Session" and set your timer.',
-            'Select which apps to block.',
-            'Open a blocked app and exercise debt increases.',
-            'Complete sets to reduce your debt.',
-          ].map((t, i) => (
-            <View key={i} style={s.howRow}>
-              <View style={s.howNum}>
-                <Text style={s.howNumText}>{i + 1}</Text>
-              </View>
-              <Text style={s.howText}>{t}</Text>
-            </View>
           ))}
         </View>
+
+        {/* ── Explore ── */}
+        <Text style={s.sectionTitle}>Explore</Text>
+        <View style={s.exploreRow}>
+          {[
+            { icon: require('../../Elements/Icon(trophy).png'),  label: 'Leaderboard', screen: 'Leaderboard' as const },
+            { icon: require('../../Elements/Icon(Timer).png'),   label: 'Fitness',     screen: 'Fitness'     as const },
+            { icon: require('../../Elements/AiChatBot.png'),     label: 'Ask AI',      screen: 'AskAI'       as const },
+          ].map(({ icon, label, screen }) => (
+            <TouchableOpacity
+              key={label}
+              style={s.exploreCard}
+              onPress={() => navigation.navigate(screen)}
+              activeOpacity={0.8}>
+              <Image source={icon} style={s.exploreIcon} resizeMode="contain" />
+              <Text style={s.exploreLabel}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
       </ScrollView>
+      <BottomNav current="Home" navigation={navigation} />
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.surface },
-  scroll: { padding: 24, paddingBottom: 72 },
-  label: {
-    color: C.secondary,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2.5,
-    marginTop: 20,
-    marginBottom: 6,
-  },
-  accountRow: {
+  safe:   { flex: 1, backgroundColor: D.bg },
+  scroll: { paddingHorizontal: SP.xl, paddingBottom: 96, paddingTop: SP.lg },
+
+  // Top bar
+  topBar:    { flexDirection: 'row', alignItems: 'center', marginBottom: SP.lg, gap: SP.md },
+  avatarBtn: { alignItems: 'center', justifyContent: 'center' },
+  avatarWrap:{ width: 48, height: 48, borderRadius: 24, overflow: 'hidden', borderWidth: 2.5, borderColor: D.primary },
+  avatar:    { width: 48, height: 48 },
+  topMid:    { flex: 1, justifyContent: 'center' },
+  greeting:  { fontSize: 16, fontWeight: '700', color: D.text },
+  levelRow:  { flexDirection: 'row', alignItems: 'center', gap: SP.sm, marginTop: 4 },
+  levelBadge:{ backgroundColor: D.primary, borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 3 },
+  levelText: { color: D.onPrimary, fontSize: 11, fontWeight: '800' },
+  xpText:    { fontSize: 12, color: D.textMuted, fontWeight: '600' },
+  notifBtn:  { width: 44, height: 44, borderRadius: 22, backgroundColor: D.card, alignItems: 'center', justifyContent: 'center', ...SH.soft },
+  notifIcon: { width: 24, height: 24, tintColor: D.primary },
+
+  // XP card
+  xpCard:  { marginBottom: SP.lg },
+  xpRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  xpLabel: { fontSize: 13, fontWeight: '600', color: D.text },
+  xpRight: { fontSize: 12, color: D.primary, fontWeight: '700' },
+
+  // Debt
+  debtCard:   { backgroundColor: D.dangerLight, marginBottom: SP.lg, borderWidth: 1.5, borderColor: D.danger, borderRadius: R.card },
+  debtRow:    { flexDirection: 'row', alignItems: 'center' },
+  debtBadge:  { alignSelf: 'flex-start', backgroundColor: D.danger, borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 3, marginBottom: SP.sm },
+  debtBadgeText:{ color: D.onDanger, fontSize: 10, fontWeight: '800', letterSpacing: 1.2 },
+  debtNum:    { fontSize: 52, fontWeight: '900', color: D.danger, lineHeight: 56 },
+  debtUnit:   { fontSize: 14, fontWeight: '600', color: D.danger, marginTop: 2 },
+  debtImg:    { width: 90, height: 90, resizeMode: 'contain', marginLeft: 8 },
+
+  // Focus card
+  focusCard:   {
+    backgroundColor: D.primary,
+    borderRadius: R.cardLg,
+    padding: SP.xl,
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 10,
+    alignItems: 'flex-end',
+    marginBottom: SP.xl,
+    overflow: 'hidden',
+    ...SH.button,
   },
-  accountName: {
-    color: C.primaryContainer,
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  accountEmail: {
-    color: C.onSurfaceVariant,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  signOutBtn: {
-    backgroundColor: C.surfaceContainerLow,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: C.outlineVariant,
-  },
-  signOutText: {
-    color: C.primaryContainer,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.3,
-  },
-  headline: {
-    color: C.primaryContainer,
-    fontSize: 30,
-    fontWeight: '800',
-    lineHeight: 36,
-    marginBottom: 6,
-  },
-  subhead: {
-    color: C.onSurfaceVariant,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 28,
-  },
-  debtCard: {
-    backgroundColor: C.surfaceContainerLowest,
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 24,
-    borderLeftWidth: 4,
-    borderLeftColor: C.error,
-    ...SHADOW.card,
-  },
-  debtTop: { marginBottom: 16 },
-  debtBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: C.errorContainer,
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    marginBottom: 10,
-  },
-  debtBadgeText: {
-    color: C.onErrorContainer,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-  },
-  debtBig: {
-    color: C.error,
-    fontSize: 48,
-    fontWeight: '900',
-    lineHeight: 52,
-  },
-  debtUnit: {
-    color: C.onSurface,
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-  debtHint: {
-    color: C.onSurfaceVariant,
-    fontSize: 13,
-    marginTop: 4,
-  },
-  debtBtn: {
-    backgroundColor: C.error,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    ...SHADOW.button,
-    shadowColor: C.error,
-  },
-  debtBtnText: {
-    color: C.onError,
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-  },
-  focusCard: {
-    backgroundColor: C.primaryContainer,
-    borderRadius: 16,
-    padding: 22,
-    marginBottom: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    ...SHADOW.card,
-  },
-  focusInner: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 14 },
-  focusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: C.secondaryContainer,
-  },
-  focusTitle: {
-    color: C.onPrimary,
-    fontSize: 17,
-    fontWeight: '800',
-  },
-  focusDesc: {
-    color: C.onPrimaryContainer,
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 3,
-  },
-  focusArrow: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  focusArrowText: { color: C.onPrimary, fontSize: 18 },
-  sectionLabel: {
-    color: C.onSurfaceVariant,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2,
-    marginBottom: 14,
-  },
-  bentoRow: { flexDirection: 'row', gap: 12, marginBottom: 28 },
-  bentoCol: { flex: 1, gap: 12 },
-  bentoCard: {
-    borderRadius: 16,
-    padding: 18,
-    alignItems: 'flex-start',
-    justifyContent: 'flex-end',
-    ...SHADOW.card,
-  },
-  bentoPrimary: {
-    flex: 1,
-    backgroundColor: C.secondary,
-    minHeight: 160,
-  },
-  bentoSmall: {
-    backgroundColor: C.surfaceContainerHigh,
-    minHeight: 72,
-  },
-  bentoSmallAlt: {
-    backgroundColor: C.surfaceContainerLow,
-    minHeight: 72,
-  },
-  bentoEmoji: { fontSize: 26, marginBottom: 8 },
-  bentoTitleLight: { color: C.onPrimary, fontSize: 15, fontWeight: '800' },
-  bentoTitleDark: { color: C.onSurface, fontSize: 15, fontWeight: '800' },
-  howCard: {
-    backgroundColor: C.surfaceContainerLow,
-    borderRadius: 16,
-    padding: 22,
-  },
-  howTitle: {
-    color: C.primaryContainer,
-    fontSize: 17,
-    fontWeight: '800',
-    marginBottom: 16,
-  },
-  howRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 12,
-  },
-  howNum: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: C.primaryContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  howNumText: { color: C.onPrimary, fontSize: 12, fontWeight: '800' },
-  howText: { color: C.onSurfaceVariant, fontSize: 13, lineHeight: 19, flex: 1 },
+  focusContent:{ flex: 1 },
+  focusTag:    { fontSize: 10, fontWeight: '800', color: D.primaryMuted, letterSpacing: 2, marginBottom: SP.sm },
+  focusTitle:  { fontSize: 22, fontWeight: '800', color: D.onPrimary, lineHeight: 28, marginBottom: SP.sm },
+  focusDesc:   { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginBottom: SP.lg },
+  focusBtn:    { alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: R.pill, paddingHorizontal: 18, paddingVertical: 8 },
+  focusBtnText:{ color: D.onPrimary, fontWeight: '700', fontSize: 14 },
+  focusImg:    { width: 100, height: 100, resizeMode: 'contain', marginLeft: -8 },
+
+  // Section
+  sectionTitle:{ fontSize: 16, fontWeight: '800', color: D.text, marginBottom: SP.md, marginTop: SP.sm },
+
+  // Exercise cards
+  exerciseRow: { flexDirection: 'row', gap: SP.md, marginBottom: SP.xl },
+  exCard:      { flex: 1, backgroundColor: D.card, borderRadius: R.card, paddingVertical: SP.lg, alignItems: 'center', ...SH.card },
+  exImg:       { width: 56, height: 56, marginBottom: SP.sm },
+  exLabel:     { fontSize: 12, fontWeight: '700', color: D.text, textAlign: 'center' },
+
+  // Explore
+  exploreRow:  { flexDirection: 'row', gap: SP.md, marginBottom: SP.xl },
+  exploreCard: { flex: 1, backgroundColor: D.card, borderRadius: R.card, paddingVertical: SP.lg, paddingHorizontal: SP.sm, alignItems: 'center', gap: SP.sm, ...SH.soft },
+  exploreIcon: { width: 40, height: 40 },
+  exploreLabel:{ fontSize: 11, fontWeight: '700', color: D.text, textAlign: 'center' },
 });

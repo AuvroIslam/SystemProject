@@ -1,15 +1,18 @@
 import React from 'react';
 import {
+  Image,
+  SafeAreaView,
   StyleSheet,
-  View,
   Text,
   TouchableOpacity,
-  SafeAreaView,
+  View,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/pose';
 import { useFocusStore, AVAILABLE_APPS } from '../store/focusStore';
-import { C, SHADOW } from '../theme/atelier';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { D, SP, R, SH } from '../theme/design';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ViolationWarning'>;
 
@@ -17,8 +20,7 @@ export function ViolationWarningScreen({ navigation }: Props) {
   const { currentViolation, pendingSets, acknowledgeWarning } = useFocusStore();
 
   const violatedApp = currentViolation
-    ? AVAILABLE_APPS.find((a) => a.packageName === currentViolation.packageName)
-        ?.label ?? 'a blocked app'
+    ? AVAILABLE_APPS.find((a) => a.packageName === currentViolation.packageName)?.label ?? 'a blocked app'
     : 'a blocked app';
 
   const handleGoBack = () => {
@@ -29,154 +31,75 @@ export function ViolationWarningScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={s.safe}>
       <View style={s.container}>
-        {/* Icon block */}
-        <View style={s.iconBlock}>
-          <Text style={s.iconText}>!</Text>
+
+        {/* Illustration */}
+        <Image
+          source={require('../../Elements/SomeThingWrong.png')}
+          style={s.illustration}
+          resizeMode="contain"
+        />
+
+        {/* Badge */}
+        <View style={s.alertBadge}>
+          <Text style={s.alertBadgeText}>⚠️  VIOLATION DETECTED</Text>
         </View>
 
-        <Text style={s.label}>VIOLATION DETECTED</Text>
-        <Text style={s.headline}>Focus Breach</Text>
-
+        <Text style={s.headline}>Focus Breach!</Text>
         <Text style={s.message}>
-          You opened <Text style={s.appName}>{violatedApp}</Text>
+          You opened{' '}
+          <Text style={s.appName}>{violatedApp}</Text>
+          {'\n'}which is on your restricted list.
         </Text>
 
-        {/* Severity card */}
-        <View style={s.severityCard}>
-          <View style={s.severityRow}>
-            <View style={s.severityItem}>
-              <Text style={s.severityValue}>+1</Text>
-              <Text style={s.severityLabel}>SET ADDED</Text>
+        {/* Stats card */}
+        <Card style={s.statsCard} padding={SP.xl}>
+          <View style={s.statsRow}>
+            <View style={s.statItem}>
+              <Text style={[s.statValue, { color: D.danger }]}>+1</Text>
+              <Text style={s.statLabel}>SET ADDED</Text>
             </View>
-            <View style={s.severityDivider} />
-            <View style={s.severityItem}>
-              <Text style={s.severityValue}>{pendingSets}</Text>
-              <Text style={s.severityLabel}>TOTAL DUE</Text>
+            <View style={s.divider} />
+            <View style={s.statItem}>
+              <Text style={[s.statValue, { color: D.primary }]}>{pendingSets}</Text>
+              <Text style={s.statLabel}>TOTAL DUE</Text>
             </View>
           </View>
-        </View>
+        </Card>
 
         <Text style={s.note}>
-          Every time you open a restricted app,{'\n'}one more set is added to your debt.
+          Each restricted app you open adds one more{'\n'}set to your exercise debt.
         </Text>
 
-        <TouchableOpacity
-          style={s.goBackBtn}
+        <Button
+          label="Go Back & Stay Focused"
           onPress={handleGoBack}
-          activeOpacity={0.8}>
-          <Text style={s.goBackText}>GO BACK & STAY FOCUSED</Text>
-        </TouchableOpacity>
+          variant="primary"
+          fullWidth
+        />
       </View>
     </SafeAreaView>
   );
 }
 
-/* ───────────── Styles ───────────── */
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.surface },
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
+  safe:      { flex: 1, backgroundColor: D.bg },
+  container: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SP.xxl, paddingBottom: SP.xxl },
 
-  /* Icon block */
-  iconBlock: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: C.primaryContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  iconText: {
-    color: C.onPrimary,
-    fontSize: 36,
-    fontWeight: '900',
-  },
+  illustration: { width: 180, height: 160, marginBottom: SP.xl },
 
-  label: {
-    color: C.error,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2.5,
-    marginBottom: 6,
-  },
-  headline: {
-    color: C.primaryContainer,
-    fontSize: 32,
-    fontWeight: '800',
-    marginBottom: 16,
-  },
-  message: {
-    color: C.onSurface,
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  appName: {
-    color: C.secondary,
-    fontWeight: '800',
-  },
+  alertBadge:    { backgroundColor: D.dangerLight, borderRadius: R.pill, paddingHorizontal: 18, paddingVertical: 8, marginBottom: SP.lg, borderWidth: 1.5, borderColor: D.danger },
+  alertBadgeText:{ color: D.danger, fontSize: 12, fontWeight: '800', letterSpacing: 1.2 },
 
-  /* Severity card */
-  severityCard: {
-    backgroundColor: C.surfaceContainerLow,
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    marginBottom: 24,
-    borderLeftWidth: 4,
-    borderLeftColor: C.secondary,
-    ...SHADOW.card,
-  },
-  severityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  severityItem: { flex: 1, alignItems: 'center' },
-  severityDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: C.outlineVariant,
-  },
-  severityValue: {
-    color: C.primaryContainer,
-    fontSize: 36,
-    fontWeight: '900',
-  },
-  severityLabel: {
-    color: C.onSurfaceVariant,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-    marginTop: 4,
-  },
+  headline: { fontSize: 30, fontWeight: '800', color: D.text, marginBottom: SP.sm, textAlign: 'center' },
+  message:  { fontSize: 15, color: D.textMuted, textAlign: 'center', lineHeight: 22, marginBottom: SP.xl },
+  appName:  { color: D.primary, fontWeight: '700' },
 
-  note: {
-    color: C.onSurfaceVariant,
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 36,
-  },
+  statsCard: { width: '100%', marginBottom: SP.xl },
+  statsRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  statItem:  { flex: 1, alignItems: 'center' },
+  statValue: { fontSize: 38, fontWeight: '900' },
+  statLabel: { fontSize: 10, fontWeight: '800', color: D.textMuted, letterSpacing: 1.5, marginTop: 4 },
+  divider:   { width: 1, height: 44, backgroundColor: D.border },
 
-  goBackBtn: {
-    backgroundColor: C.primaryContainer,
-    borderRadius: 14,
-    paddingVertical: 18,
-    width: '100%',
-    alignItems: 'center',
-    ...SHADOW.button,
-    shadowColor: C.primaryContainer,
-  },
-  goBackText: {
-    color: C.onPrimary,
-    fontSize: 14,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
+  note: { color: D.textMuted, fontSize: 13, textAlign: 'center', lineHeight: 20, marginBottom: SP.xl },
 });

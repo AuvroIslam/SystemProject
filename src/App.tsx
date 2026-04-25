@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StyleSheet, Text, View } from 'react-native';
 import { RootStackParamList } from './types/pose';
-import { C } from './theme/atelier';
+import { D } from './theme/design';
 import { AuthScreen } from './screens/AuthScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { ExerciseScreen } from './screens/ExerciseScreen';
@@ -14,6 +14,10 @@ import { ViolationWarningScreen } from './screens/ViolationWarningScreen';
 import { PunishExerciseScreen } from './screens/PunishExerciseScreen';
 import { DebtPayScreen } from './screens/DebtPayScreen';
 import { FocusSummaryScreen } from './screens/FocusSummaryScreen';
+import { LeaderboardScreen } from './screens/LeaderboardScreen';
+import { FitnessScreen } from './screens/FitnessScreen';
+import { AskAIScreen } from './screens/AskAIScreen';
+import { ProfileScreen } from './screens/ProfileScreen';
 import { initializeAuth } from './services/authService';
 import { useAuthStore } from './store/authStore';
 
@@ -34,7 +38,7 @@ export default function App() {
         screenOptions={{
           headerShown: false,
           animation: 'slide_from_right',
-          contentStyle: { backgroundColor: C.surface },
+          contentStyle: { backgroundColor: D.bg },
         }}>
         {isInitializing ? (
           <Stack.Screen name="Auth" component={AuthBootstrapScreen} />
@@ -49,6 +53,10 @@ export default function App() {
             <Stack.Screen name="FocusSummary" component={FocusSummaryScreen} />
             <Stack.Screen name="Exercise" component={ExerciseScreen} />
             <Stack.Screen name="Summary" component={SummaryScreen} />
+            <Stack.Screen name="Leaderboard" component={LeaderboardScreen} />
+            <Stack.Screen name="Fitness" component={FitnessScreen} />
+            <Stack.Screen name="AskAI" component={AskAIScreen} />
+            <Stack.Screen name="Profile" component={ProfileScreen} />
           </>
         ) : (
           <Stack.Screen name="Auth" component={AuthScreen} />
@@ -72,17 +80,17 @@ const s = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: C.surface,
+    backgroundColor: D.bg,
     padding: 24,
   },
   bootTitle: {
-    color: C.primaryContainer,
+    color: D.primary,
     fontSize: 28,
     fontWeight: '800',
     marginBottom: 8,
   },
   bootText: {
-    color: C.onSurfaceVariant,
+    color: D.textMuted,
     fontSize: 14,
   },
 });
