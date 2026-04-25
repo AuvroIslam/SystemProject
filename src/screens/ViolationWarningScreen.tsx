@@ -12,6 +12,7 @@ import { RootStackParamList } from '../types/pose';
 import { useFocusStore, AVAILABLE_APPS } from '../store/focusStore';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { AppBackground } from '../components/ui/AppBackground';
 import { D, SP, R, SH } from '../theme/design';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ViolationWarning'>;
@@ -29,6 +30,7 @@ export function ViolationWarningScreen({ navigation }: Props) {
   };
 
   return (
+    <AppBackground variant={1}>
     <SafeAreaView style={s.safe}>
       <View style={s.container}>
 
@@ -78,11 +80,12 @@ export function ViolationWarningScreen({ navigation }: Props) {
         />
       </View>
     </SafeAreaView>
+    </AppBackground>
   );
 }
 
 const s = StyleSheet.create({
-  safe:      { flex: 1, backgroundColor: D.bg },
+  safe:      { flex: 1, backgroundColor: 'transparent' },
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SP.xxl, paddingBottom: SP.xxl },
 
   illustration: { width: 180, height: 160, marginBottom: SP.xl },

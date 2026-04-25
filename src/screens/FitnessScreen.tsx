@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -16,6 +17,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { StatItem } from '../components/ui/StatItem';
 import { BottomNav } from '../components/ui/BottomNav';
+import { AppBackground } from '../components/ui/AppBackground';
 import { D, SP, R, SH } from '../theme/design';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Fitness'>;
@@ -32,9 +34,9 @@ function exerciseLabel(t: string) {
 
 function TimerWorkout() {
   const [durationMin, setDurationMin] = useState('2');
-  const [running, setRunning] = useState(false);
+  const [running, setRunning]         = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(0);
-  const [repsDone, setRepsDone] = useState(0);
+  const [repsDone, setRepsDone]       = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const startTimer = () => {
@@ -85,7 +87,7 @@ function TimerWorkout() {
           <Text style={t.timerReps}>{repsDone} reps</Text>
           <View style={t.btnRow}>
             <Button label="+ Rep" onPress={() => setRepsDone((r) => r + 1)} variant="primary" style={{ flex: 1 }} />
-            <Button label="Stop" onPress={() => { clearInterval(intervalRef.current!); setRunning(false); }} variant="danger" style={{ flex: 1 }} />
+            <Button label="Stop"  onPress={() => { clearInterval(intervalRef.current!); setRunning(false); }} variant="danger" style={{ flex: 1 }} />
           </View>
         </>
       )}
@@ -94,7 +96,7 @@ function TimerWorkout() {
 }
 
 export function FitnessScreen({ navigation }: Props) {
-  const [stats, setStats] = useState<DailyStats | null>(null);
+  const [stats, setStats]     = useState<DailyStats | null>(null);
   const [history, setHistory] = useState<WorkoutEntry[]>([]);
 
   useEffect(() => {
@@ -103,65 +105,62 @@ export function FitnessScreen({ navigation }: Props) {
   }, []);
 
   return (
-    <SafeAreaView style={s.safe}>
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+    <AppBackground variant={1}>
+      <SafeAreaView style={s.safe}>
+        <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
-        {/* Header */}
-        <View style={s.header}>
-          <Text style={s.title}>Fitness</Text>
-        </View>
+          <View style={s.header}>
+            <Text style={s.title}>Fitness</Text>
+          </View>
 
-        {/* Daily stats */}
-        <Text style={s.sectionTitle}>Today</Text>
-        <View style={s.statsRow}>
-          <StatItem value={stats?.totalReps ?? 0} label="Total Reps" accent />
-          <StatItem value={stats?.sessionsCompleted ?? 0} label="Sessions" />
-        </View>
+          <Text style={s.sectionTitle}>Today</Text>
+          <View style={s.statsRow}>
+            <StatItem value={stats?.totalReps ?? 0} label="Total Reps" accent />
+            <StatItem value={stats?.sessionsCompleted ?? 0} label="Sessions" />
+          </View>
 
-        {/* Timer */}
-        <Text style={s.sectionTitle}>Timer Workout</Text>
-        <TimerWorkout />
+          <Text style={s.sectionTitle}>Timer Workout</Text>
+          <TimerWorkout />
 
-        {/* History */}
-        <Text style={s.sectionTitle}>Recent Workouts</Text>
-        <Card>
-          {history.length === 0 ? (
-            <View style={s.emptyBlock}>
-              <Image source={require('../../Elements/EmptyState.png')} style={s.emptyImg} resizeMode="contain" />
-              <Text style={s.emptyText}>No workouts yet. Start exercising!</Text>
-            </View>
-          ) : (
-            history.map((entry, i) => (
-              <View key={i} style={[s.historyRow, i < history.length - 1 && s.historyBorder]}>
-                <Image source={EXERCISE_IMGS[entry.exerciseType] ?? EXERCISE_IMGS.pushup} style={s.historyImg} resizeMode="contain" />
-                <View style={{ flex: 1 }}>
-                  <Text style={s.historyEx}>{exerciseLabel(entry.exerciseType)}</Text>
-                  <Text style={s.historyDate}>{entry.date.slice(0, 10)}</Text>
-                </View>
-                <View style={s.repsBadge}>
-                  <Text style={s.repsVal}>{entry.reps}</Text>
-                  <Text style={s.repsLabel}>reps</Text>
-                </View>
+          <Text style={s.sectionTitle}>Recent Workouts</Text>
+          <Card>
+            {history.length === 0 ? (
+              <View style={s.emptyBlock}>
+                <Image source={require('../../Elements/EmptyState.png')} style={s.emptyImg} resizeMode="contain" />
+                <Text style={s.emptyText}>No workouts yet. Start exercising!</Text>
               </View>
-            ))
-          )}
-        </Card>
+            ) : (
+              history.map((entry, i) => (
+                <View key={i} style={[s.historyRow, i < history.length - 1 && s.historyBorder]}>
+                  <Image source={EXERCISE_IMGS[entry.exerciseType] ?? EXERCISE_IMGS.pushup} style={s.historyImg} resizeMode="contain" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.historyEx}>{exerciseLabel(entry.exerciseType)}</Text>
+                    <Text style={s.historyDate}>{entry.date.slice(0, 10)}</Text>
+                  </View>
+                  <View style={s.repsBadge}>
+                    <Text style={s.repsVal}>{entry.reps}</Text>
+                    <Text style={s.repsLabel}>reps</Text>
+                  </View>
+                </View>
+              ))
+            )}
+          </Card>
 
-      </ScrollView>
-      <BottomNav current="Fitness" navigation={navigation} />
-    </SafeAreaView>
+        </ScrollView>
+        <BottomNav current="Fitness" navigation={navigation} />
+      </SafeAreaView>
+    </AppBackground>
   );
 }
 
 const s = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: D.bg },
+  safe:   { flex: 1, backgroundColor: 'transparent' },
   scroll: { paddingHorizontal: SP.xl, paddingBottom: 96, paddingTop: SP.base },
 
   header:       { marginBottom: SP.lg },
   title:        { fontSize: 22, fontWeight: '900', color: D.text },
   sectionTitle: { fontSize: 16, fontWeight: '800', color: D.text, marginBottom: SP.md, marginTop: SP.sm },
-
-  statsRow: { flexDirection: 'row', gap: SP.md, marginBottom: SP.xl },
+  statsRow:     { flexDirection: 'row', gap: SP.md, marginBottom: SP.xl },
 
   emptyBlock: { alignItems: 'center', paddingVertical: SP.xl },
   emptyImg:   { width: 100, height: 80, marginBottom: SP.md },

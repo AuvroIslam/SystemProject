@@ -18,6 +18,11 @@ import { LeaderboardScreen } from './screens/LeaderboardScreen';
 import { FitnessScreen } from './screens/FitnessScreen';
 import { AskAIScreen } from './screens/AskAIScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
+import { PlanSelectionScreen } from './screens/PlanSelectionScreen';
+import { InstructorPlanSetupScreen } from './screens/InstructorPlanSetupScreen';
+import { ExercisePlanScreen } from './screens/ExercisePlanScreen';
+import { DailyWorkoutScreen } from './screens/DailyWorkoutScreen';
+import { AIPlanChatScreen } from './screens/AIPlanChatScreen';
 import { initializeAuth } from './services/authService';
 import { useAuthStore } from './store/authStore';
 
@@ -57,6 +62,11 @@ export default function App() {
             <Stack.Screen name="Fitness" component={FitnessScreen} />
             <Stack.Screen name="AskAI" component={AskAIScreen} />
             <Stack.Screen name="Profile" component={ProfileScreen} />
+            <Stack.Screen name="PlanSelection" component={PlanSelectionScreen} />
+            <Stack.Screen name="InstructorPlanSetup" component={InstructorPlanSetupScreen} />
+            <Stack.Screen name="ExercisePlan" component={ExercisePlanScreen} />
+            <Stack.Screen name="DailyWorkout" component={DailyWorkoutScreen} />
+            <Stack.Screen name="AIPlanChat" component={AIPlanChatScreen} />
           </>
         ) : (
           <Stack.Screen name="Auth" component={AuthScreen} />

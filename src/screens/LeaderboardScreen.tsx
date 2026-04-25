@@ -15,6 +15,7 @@ import { useXPStore, LeaderboardEntry } from '../store/xpStore';
 import { useAuthStore } from '../store/authStore';
 import { Card } from '../components/ui/Card';
 import { BottomNav } from '../components/ui/BottomNav';
+import { AppBackground } from '../components/ui/AppBackground';
 import { D, SP, R, SH } from '../theme/design';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Leaderboard'>;
@@ -98,6 +99,7 @@ export function LeaderboardScreen({ navigation }: Props) {
   useEffect(() => { fetchLeaderboard(); }, []);
 
   return (
+    <AppBackground variant={1}>
     <SafeAreaView style={s.safe}>
       {/* Header */}
       <View style={s.header}>
@@ -122,12 +124,14 @@ export function LeaderboardScreen({ navigation }: Props) {
           keyExtractor={(item) => item.uid}
           ListHeaderComponent={
             <>
-              {leaderboard.length >= 3 && (
-                <View style={s.podiumSection}>
-                  <Image source={require('../../Elements/VictoryPodium.png')} style={s.podiumBg} resizeMode="contain" />
-                  <TopThree entries={leaderboard} myUid={user?.uid} />
+              <View style={s.podiumSection}>
+                <View style={s.podiumHeroWrap}>
+                  <Image source={require('../../Elements/VictoryPodiumNew.png')} style={s.podiumHero} resizeMode="cover" />
                 </View>
-              )}
+                {leaderboard.length >= 3 && (
+                  <TopThree entries={leaderboard} myUid={user?.uid} />
+                )}
+              </View>
               <Text style={s.listTitle}>ALL RANKINGS</Text>
             </>
           }
@@ -145,17 +149,19 @@ export function LeaderboardScreen({ navigation }: Props) {
       )}
       <BottomNav current="Leaderboard" navigation={navigation} />
     </SafeAreaView>
+    </AppBackground>
   );
 }
 
 const s = StyleSheet.create({
-  safe:  { flex: 1, backgroundColor: D.bg },
+  safe:  { flex: 1, backgroundColor: 'transparent' },
   header:{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SP.xl, paddingVertical: SP.base },
   back:  { color: D.primary, fontSize: 15, fontWeight: '600', minWidth: 50 },
   title: { fontSize: 20, fontWeight: '800', color: D.text },
 
   podiumSection: { alignItems: 'center', paddingHorizontal: SP.xl, paddingTop: SP.base, marginBottom: SP.xl },
-  podiumBg:      { width: '100%', height: 80, opacity: 0.15, position: 'absolute', bottom: 0 },
+  podiumHeroWrap: { width: '100%', height: 240, borderRadius: 20, overflow: 'hidden', marginBottom: SP.md },
+  podiumHero:    { width: '100%', height: '100%' },
 
   listTitle:{ fontSize: 11, fontWeight: '800', color: D.textMuted, letterSpacing: 2, paddingHorizontal: SP.xl, marginBottom: SP.md },
   list:     { paddingHorizontal: SP.xl, paddingBottom: 96, gap: SP.sm },

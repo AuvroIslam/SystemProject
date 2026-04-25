@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/pose';
 import { useFocusStore } from '../store/focusStore';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ProgressBar } from '../components/ui/ProgressBar';
+import { AppBackground } from '../components/ui/AppBackground';
 import { D, SP, R, SH } from '../theme/design';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DebtPay'>;
@@ -46,11 +48,12 @@ export function DebtPayScreen({ navigation }: Props) {
   const pct = selectedSets / maxSets;
 
   return (
+    <AppBackground variant={1}>
     <SafeAreaView style={s.safe}>
       <View style={s.container}>
 
         <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <Text style={s.backText}>← Back</Text>
+          <Feather name="chevron-left" size={26} color={D.primary} />
         </TouchableOpacity>
 
         {/* ── Header ── */}
@@ -125,15 +128,15 @@ export function DebtPayScreen({ navigation }: Props) {
 
       </View>
     </SafeAreaView>
+    </AppBackground>
   );
 }
 
 const s = StyleSheet.create({
-  safe:      { flex: 1, backgroundColor: D.bg },
+  safe:      { flex: 1, backgroundColor: 'transparent' },
   container: { flex: 1, paddingHorizontal: SP.xl, paddingTop: SP.base, paddingBottom: SP.xxl },
 
   backBtn:  { alignSelf: 'flex-start', marginBottom: SP.base },
-  backText: { color: D.primary, fontSize: 15, fontWeight: '600' },
 
   tag:      { fontSize: 11, fontWeight: '800', color: D.primary, letterSpacing: 2, marginBottom: SP.xs },
   headline: { fontSize: 28, fontWeight: '800', color: D.text, marginBottom: SP.xl },

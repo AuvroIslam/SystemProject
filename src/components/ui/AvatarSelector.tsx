@@ -27,7 +27,9 @@ export function AvatarSelector({ selectedAvatar, onSelectAvatar }: Props) {
             onPress={() => onSelectAvatar(i)}
             activeOpacity={0.8}
             style={[s.cell, active && s.cellActive]}>
-            <Image source={src} style={s.avatar} resizeMode="cover" />
+            <View style={s.imgClip}>
+              <Image source={src} style={s.avatar} resizeMode="cover" />
+            </View>
             {active && <View style={s.checkBadge} />}
           </TouchableOpacity>
         );
@@ -49,14 +51,21 @@ const s = StyleSheet.create({
     width: CELL_SIZE,
     height: CELL_SIZE,
     borderRadius: CELL_SIZE / 2,
-    overflow: 'hidden',
     borderWidth: 3,
     borderColor: D.border,
+    alignItems: 'center',
+    justifyContent: 'center',
     ...SH.soft,
   },
   cellActive: {
     borderColor: D.primary,
     ...SH.button,
+  },
+  imgClip: {
+    width: CELL_SIZE - 6,
+    height: CELL_SIZE - 6,
+    borderRadius: (CELL_SIZE - 6) / 2,
+    overflow: 'hidden',
   },
   avatar: {
     width: '100%',
@@ -64,8 +73,8 @@ const s = StyleSheet.create({
   },
   checkBadge: {
     position: 'absolute',
-    bottom: 4,
-    right: 4,
+    bottom: -2,
+    right: -2,
     width: 18,
     height: 18,
     borderRadius: 9,

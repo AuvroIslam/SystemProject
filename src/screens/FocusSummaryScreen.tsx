@@ -16,6 +16,7 @@ import { useXPStore } from '../store/xpStore';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ProgressBar } from '../components/ui/ProgressBar';
+import { AppBackground } from '../components/ui/AppBackground';
 import { D, SP, R, SH } from '../theme/design';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'FocusSummary'>;
@@ -48,6 +49,7 @@ export function FocusSummaryScreen({ navigation }: Props) {
   };
 
   return (
+    <AppBackground variant={1}>
     <SafeAreaView style={s.safe}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
@@ -136,11 +138,12 @@ export function FocusSummaryScreen({ navigation }: Props) {
 
       </ScrollView>
     </SafeAreaView>
+    </AppBackground>
   );
 }
 
 const s = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: D.bg },
+  safe:   { flex: 1, backgroundColor: 'transparent' },
   scroll: { paddingHorizontal: SP.xl, paddingBottom: 72, alignItems: 'center' },
 
   illustration: { width: 180, height: 160, marginTop: SP.xl, marginBottom: SP.md },

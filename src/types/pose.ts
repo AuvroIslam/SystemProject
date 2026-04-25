@@ -119,4 +119,9 @@ export type RootStackParamList = {
   Fitness: undefined;
   AskAI: undefined;
   Profile: undefined;
+  PlanSelection: undefined;
+  InstructorPlanSetup: undefined;
+  ExercisePlan: undefined;
+  DailyWorkout: undefined;
+  AIPlanChat: undefined;
 };

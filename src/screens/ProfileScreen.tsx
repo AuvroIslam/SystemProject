@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/pose';
 import { useAuthStore } from '../store/authStore';
@@ -19,18 +20,21 @@ import { Button } from '../components/ui/Button';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { BottomNav } from '../components/ui/BottomNav';
 import { AvatarSelector, AVATARS } from '../components/ui/AvatarSelector';
+import { MiniCalendar } from '../components/ui/MiniCalendar';
 import { useAvatarStore } from '../store/avatarStore';
+import { useExercisePlanStore } from '../store/exercisePlanStore';
+import { AppBackground } from '../components/ui/AppBackground';
 import { D, SP, R, SH } from '../theme/design';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Profile'>;
 
 const ACHIEVEMENTS = [
-  { icon: '🏆', label: 'First Session',  color: D.gold },
-  { icon: '🔥', label: '7-Day Streak',   color: '#FF6B6B' },
-  { icon: '💪', label: '100 Reps',       color: D.primary },
-  { icon: '🎯', label: 'Zero Violations', color: D.accent },
-  { icon: '⚡', label: 'Fast Finisher',  color: D.warning },
-  { icon: '🧘', label: 'Focused Mind',   color: '#9B59B6' },
+  { icon: 'trophy',         label: 'First Session',   color: D.primary },
+  { icon: 'fire',           label: '7-Day Streak',    color: D.primary },
+  { icon: 'dumbbell',       label: '100 Reps',        color: D.primary },
+  { icon: 'shield-star',    label: 'Zero Violations', color: D.primary },
+  { icon: 'lightning-bolt', label: 'Fast Finisher',   color: D.primary },
+  { icon: 'meditation',     label: 'Focused Mind',    color: D.primary },
 ];
 
 export function ProfileScreen({ navigation }: Props) {
@@ -42,10 +46,24 @@ export function ProfileScreen({ navigation }: Props) {
   const xpProgress = (xp % 100) / 100;
   const xpToNext = 100 - (xp % 100);
 
+  const activePlan        = useExercisePlanStore((s) => s.activePlan);
+  const completions       = useExercisePlanStore((s) => s.completions);
+  const isTodayComplete   = useExercisePlanStore((s) => s.isTodayComplete);
+  const getTodayWorkout   = useExercisePlanStore((s) => s.getTodayWorkout);
+  const getCurrentWeek    = useExercisePlanStore((s) => s.getCurrentWeekNumber);
+  const getOverallProgress = useExercisePlanStore((s) => s.getOverallProgress);
+
+  const todayWorkout  = activePlan ? getTodayWorkout() : null;
+  const todayDone     = activePlan ? isTodayComplete() : false;
+  const currentWeek   = activePlan ? getCurrentWeek() : 1;
+  const progress      = getOverallProgress();
+  const hasWorkoutToday = todayWorkout && !todayWorkout.isRestDay && !todayDone;
+
   const displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Athlete';
   const email = user?.email ?? '';
 
   return (
+    <AppBackground variant={1}>
     <SafeAreaView style={s.safe}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
@@ -87,13 +105,64 @@ export function ProfileScreen({ navigation }: Props) {
           ))}
         </View>
 
+        {/* ── My Plan ── */}
+        <Text style={s.sectionTitle}>My Plan</Text>
+        {activePlan ? (
+          <Card style={s.planCard} padding={SP.xl}>
+            <View style={s.planHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.planTitle} numberOfLines={1}>{activePlan.title}</Text>
+                <View style={s.planMeta}>
+                  <View style={s.planBadge}>
+                    <Text style={s.planBadgeText}>{activePlan.level.toUpperCase()}</Text>
+                  </View>
+                  <Text style={s.planWeek}>Week {currentWeek} of {activePlan.totalWeeks}</Text>
+                </View>
+              </View>
+              <View style={s.planProgressCircle}>
+                <Text style={s.planProgressNum}>{progress.completedDays}</Text>
+                <Text style={s.planProgressOf}>/{progress.totalWorkoutDays}</Text>
+              </View>
+            </View>
+
+            <MiniCalendar plan={activePlan} completions={completions} />
+
+            <View style={s.planActions}>
+              {hasWorkoutToday && (
+                <TouchableOpacity
+                  style={s.planStartBtn}
+                  onPress={() => navigation.navigate('DailyWorkout')}
+                  activeOpacity={0.8}>
+                  <Text style={s.planStartText}>Start Today's Workout</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={s.planViewBtn}
+                onPress={() => navigation.navigate('ExercisePlan')}
+                activeOpacity={0.8}>
+                <Text style={s.planViewText}>View Full Plan</Text>
+              </TouchableOpacity>
+            </View>
+          </Card>
+        ) : (
+          <Card style={s.planCard} padding={SP.xl}>
+            <Text style={s.noPlanText}>No active plan yet.</Text>
+            <TouchableOpacity
+              style={s.planStartBtn}
+              onPress={() => navigation.navigate('PlanSelection')}
+              activeOpacity={0.8}>
+              <Text style={s.planStartText}>Create a Plan</Text>
+            </TouchableOpacity>
+          </Card>
+        )}
+
         {/* ── Achievements ── */}
         <Text style={s.sectionTitle}>Achievements</Text>
         <View style={s.achieveGrid}>
           {ACHIEVEMENTS.map(({ icon, label, color }) => (
             <View key={label} style={s.achieveItem}>
               <View style={[s.achieveBadge, { backgroundColor: color + '22', borderColor: color + '44' }]}>
-                <Text style={s.achieveIcon}>{icon}</Text>
+                <MaterialCommunityIcons name={icon} size={26} color={color} />
               </View>
               <Text style={s.achieveLabel}>{label}</Text>
             </View>
@@ -127,11 +196,12 @@ export function ProfileScreen({ navigation }: Props) {
       </ScrollView>
       <BottomNav current="Profile" navigation={navigation} />
     </SafeAreaView>
+    </AppBackground>
   );
 }
 
 const s = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: D.bg },
+  safe:   { flex: 1, backgroundColor: 'transparent' },
   scroll: { paddingHorizontal: SP.xl, paddingBottom: 96, paddingTop: SP.base },
 
   hero:       { alignItems: 'center', marginBottom: SP.xl },
@@ -158,8 +228,25 @@ const s = StyleSheet.create({
   achieveGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: SP.md, marginBottom: SP.xl },
   achieveItem: { width: '30%', alignItems: 'center', gap: SP.sm },
   achieveBadge:{ width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5 },
-  achieveIcon: { fontSize: 24 },
   achieveLabel:{ fontSize: 11, fontWeight: '600', color: D.textMuted, textAlign: 'center' },
+
+  // Plan section
+  planCard:          { marginBottom: SP.xl },
+  planHeader:        { flexDirection: 'row', alignItems: 'flex-start', gap: SP.md, marginBottom: SP.md },
+  planTitle:         { fontSize: 16, fontWeight: '800', color: D.text, marginBottom: SP.xs },
+  planMeta:          { flexDirection: 'row', alignItems: 'center', gap: SP.sm },
+  planBadge:         { backgroundColor: D.primary, borderRadius: R.pill, paddingHorizontal: 8, paddingVertical: 3 },
+  planBadgeText:     { color: D.onPrimary, fontSize: 9, fontWeight: '800', letterSpacing: 1 },
+  planWeek:          { fontSize: 12, color: D.textMuted, fontWeight: '600' },
+  planProgressCircle:{ width: 52, height: 52, borderRadius: 26, backgroundColor: D.primaryLight, borderWidth: 2, borderColor: D.primary, alignItems: 'center', justifyContent: 'center' },
+  planProgressNum:   { fontSize: 16, fontWeight: '900', color: D.primary, lineHeight: 18 },
+  planProgressOf:    { fontSize: 9, color: D.textMuted, fontWeight: '600' },
+  planActions:       { flexDirection: 'row', gap: SP.md, marginTop: SP.lg, flexWrap: 'wrap' },
+  planStartBtn:      { flex: 1, backgroundColor: D.primary, borderRadius: R.pill, paddingVertical: SP.md, alignItems: 'center', justifyContent: 'center' },
+  planStartText:     { color: D.onPrimary, fontSize: 13, fontWeight: '700' },
+  planViewBtn:       { flex: 1, backgroundColor: D.primaryLight, borderRadius: R.pill, paddingVertical: SP.md, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: D.primary + '55' },
+  planViewText:      { color: D.primary, fontSize: 13, fontWeight: '700' },
+  noPlanText:        { fontSize: 14, color: D.textMuted, marginBottom: SP.lg },
 
   rewardRow: { flexDirection: 'row', alignItems: 'center', gap: SP.lg, backgroundColor: D.primaryLight, borderRadius: R.card, padding: SP.lg, marginBottom: SP.xl },
   rewardImg: { width: 80, height: 80 },

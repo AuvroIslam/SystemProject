@@ -143,7 +143,7 @@ function fmt(ms: number): string {
 // ── styles ──
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.surface },
+  root: { flex: 1, backgroundColor: 'transparent' },
   content: { padding: 24, paddingTop: 60, paddingBottom: 72 },
 
   label: {

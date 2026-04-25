@@ -12,8 +12,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/pose';
+import { AppBackground } from '../components/ui/AppBackground';
 import { D, SP, R, SH } from '../theme/design';
 import { GROQ_API_KEY } from '../config/keys';
 
@@ -121,22 +123,22 @@ export function AskAIScreen({ navigation }: Props) {
   };
 
   return (
+    <AppBackground variant={2}>
     <SafeAreaView style={s.safe}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
 
         {/* ── Header ── */}
         <View style={s.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
-            <Text style={s.back}>← Back</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7} style={s.backBtn}>
+            <Feather name="chevron-left" size={26} color={D.primary} />
           </TouchableOpacity>
           <View style={s.headerCenter}>
             <Image source={require('../../Elements/AiChatBot.png')} style={s.botIcon} resizeMode="cover" />
-            <View>
+            <View style={s.headerTextWrap}>
               <Text style={s.headerTitle}>AI Coach</Text>
               <Text style={s.headerSub}>Powered by Groq</Text>
             </View>
           </View>
-          <View style={{ width: 50 }} />
         </View>
 
         {/* ── Messages ── */}
@@ -184,21 +186,23 @@ export function AskAIScreen({ navigation }: Props) {
             onPress={send}
             disabled={!input.trim() || loading}
             activeOpacity={0.75}>
-            <Text style={s.sendIcon}>↑</Text>
+            <Feather name="send" size={20} color={D.onPrimary} />
           </TouchableOpacity>
         </View>
 
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </AppBackground>
   );
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: D.bg },
+  safe: { flex: 1, backgroundColor: 'transparent' },
 
-  header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SP.xl, paddingVertical: SP.base, borderBottomWidth: 1, borderColor: D.border, backgroundColor: D.card },
-  back:         { color: D.primary, fontSize: 15, fontWeight: '600', minWidth: 50 },
-  headerCenter: { flexDirection: 'row', alignItems: 'center', gap: SP.md },
+  header:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SP.xl, paddingVertical: SP.base, borderBottomWidth: 1, borderColor: D.border, backgroundColor: D.card },
+  backBtn:      { width: 44, alignItems: 'flex-start', justifyContent: 'center' },
+  headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: SP.md },
+  headerTextWrap: { alignItems: 'flex-start' },
   botIcon:      { width: 40, height: 40, borderRadius: 20, backgroundColor: D.primaryLight },
   headerTitle:  { fontSize: 15, fontWeight: '800', color: D.text },
   headerSub:    { fontSize: 11, color: D.textMuted },
@@ -220,7 +224,7 @@ const s = StyleSheet.create({
 
   inputBar: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     gap: SP.sm,
     paddingHorizontal: SP.xl,
     paddingVertical: SP.md,
@@ -242,5 +246,4 @@ const s = StyleSheet.create({
   },
   sendBtn:    { width: 44, height: 44, borderRadius: 22, backgroundColor: D.primary, alignItems: 'center', justifyContent: 'center', ...SH.button },
   sendBtnOff: { backgroundColor: D.border, shadowOpacity: 0, elevation: 0 },
-  sendIcon:   { color: D.onPrimary, fontSize: 18, fontWeight: '800' },
 });

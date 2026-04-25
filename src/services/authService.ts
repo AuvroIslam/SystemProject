@@ -8,6 +8,7 @@ import {
 } from '@react-native-google-signin/google-signin';
 import { AUTH_CONFIG, isGoogleAuthConfigured } from '../config/auth';
 import { useAuthStore } from '../store/authStore';
+import { useCalendarStore } from '../store/calendarStore';
 import { useExerciseStore } from '../store/exerciseStore';
 import { useFocusStore } from '../store/focusStore';
 
@@ -18,6 +19,7 @@ export function initializeAuth() {
     isGoogleAuthConfigured()
       ? {
           webClientId: AUTH_CONFIG.googleWebClientId,
+          scopes: [...AUTH_CONFIG.calendarScopes],
         }
       : {},
   );
@@ -83,12 +85,26 @@ export async function signInWithGoogle() {
   }
 
   const googleCredential = auth.GoogleAuthProvider.credential(idToken);
-  return auth().signInWithCredential(googleCredential);
+  const result = await auth().signInWithCredential(googleCredential);
+
+  // Store access token for Google Calendar sync (non-critical if it fails)
+  try {
+    const tokens = await GoogleSignin.getTokens();
+    const accessToken = (tokens as any).accessToken as string | undefined;
+    if (accessToken) {
+      useCalendarStore.getState().setAccessToken(accessToken);
+    }
+  } catch {
+    // Calendar sync will simply require re-sign-in
+  }
+
+  return result;
 }
 
 export async function signOutUser() {
   await GoogleSignin.signOut().catch(() => null);
   await auth().signOut();
+  useCalendarStore.getState().clearToken();
   useExerciseStore.getState().reset();
   useFocusStore.getState().resetAll();
 }
@@ -105,26 +121,20 @@ export function toAuthErrorMessage(error: unknown) {
     }
   }
 
-  const code = typeof error === 'object' && error && 'code' in error
-    ? String((error as { code?: unknown }).code)
-    : null;
+  const code =
+    typeof error === 'object' && error && 'code' in error
+      ? String((error as { code?: unknown }).code)
+      : null;
 
   switch (code) {
-    case 'auth/invalid-email':
-      return 'Enter a valid email address.';
-    case 'auth/missing-password':
-      return 'Enter your password.';
-    case 'auth/weak-password':
-      return 'Password should be at least 6 characters.';
-    case 'auth/invalid-credential':
-      return 'Invalid credentials. Check your email and password.';
-    case 'auth/email-already-in-use':
-      return 'This email is already registered. Try signing in instead.';
+    case 'auth/invalid-email':         return 'Enter a valid email address.';
+    case 'auth/missing-password':      return 'Enter your password.';
+    case 'auth/weak-password':         return 'Password should be at least 6 characters.';
+    case 'auth/invalid-credential':    return 'Invalid credentials. Check your email and password.';
+    case 'auth/email-already-in-use':  return 'This email is already registered. Try signing in instead.';
     case 'auth/user-not-found':
-    case 'auth/wrong-password':
-      return 'Incorrect email or password.';
-    case 'auth/network-request-failed':
-      return 'Network error. Check your internet connection and try again.';
+    case 'auth/wrong-password':        return 'Incorrect email or password.';
+    case 'auth/network-request-failed':return 'Network error. Check your internet connection and try again.';
   }
 
   if (error instanceof Error && error.message) {

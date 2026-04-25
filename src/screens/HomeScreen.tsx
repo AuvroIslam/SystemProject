@@ -10,16 +10,17 @@ import {
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList, ExerciseType } from '../types/pose';
-import { signOutUser } from '../services/authService';
 import { useAuthStore } from '../store/authStore';
 import { useFocusStore } from '../store/focusStore';
 import { useXPStore } from '../store/xpStore';
+import { useExercisePlanStore } from '../store/exercisePlanStore';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { BottomNav } from '../components/ui/BottomNav';
 import { AVATARS } from '../components/ui/AvatarSelector';
 import { useAvatarStore } from '../store/avatarStore';
+import { AppBackground } from '../components/ui/AppBackground';
 import { D, SP, R, SH } from '../theme/design';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
@@ -38,9 +39,19 @@ export function HomeScreen({ navigation }: Props) {
   const xpProgress = (xp % 100) / 100;
   const displayName = user?.displayName ?? user?.email?.split('@')[0] ?? 'Athlete';
 
+  const activePlan       = useExercisePlanStore((s) => s.activePlan);
+  const getTodayWorkout  = useExercisePlanStore((s) => s.getTodayWorkout);
+  const isTodayComplete  = useExercisePlanStore((s) => s.isTodayComplete);
+  const getCurrentWeek   = useExercisePlanStore((s) => s.getCurrentWeekNumber);
+
+  const todayWorkout  = activePlan ? getTodayWorkout() : null;
+  const todayDone     = activePlan ? isTodayComplete() : false;
+  const currentWeek   = activePlan ? getCurrentWeek() : 1;
+
   const go = (type: ExerciseType) => navigation.navigate('Exercise', { exerciseType: type });
 
   return (
+    <AppBackground variant={1}>
     <SafeAreaView style={s.safe}>
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
 
@@ -120,6 +131,63 @@ export function HomeScreen({ navigation }: Props) {
           </View>
         </TouchableOpacity>
 
+        {/* ── Plan Card ── */}
+        {activePlan ? (
+          <TouchableOpacity
+            style={s.planCard}
+            onPress={() => navigation.navigate('ExercisePlan')}
+            activeOpacity={0.85}>
+            <View style={s.planCardTop}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.planTag}>WORKOUT PLAN · WEEK {currentWeek}</Text>
+                <Text style={s.planTitle} numberOfLines={1}>{activePlan.title}</Text>
+                <Text style={s.planMeta}>
+                  {todayWorkout
+                    ? todayWorkout.isRestDay
+                      ? 'Today: Rest Day'
+                      : `Today: ${todayWorkout.focus} · ${todayWorkout.exercises.length} exercises`
+                    : 'No workout today'}
+                </Text>
+              </View>
+              <View style={s.planIconWrap}>
+                <Image source={require('../../Elements/pushup.png')} style={s.planIcon} resizeMode="contain" />
+              </View>
+            </View>
+            <View style={s.planCardBottom}>
+              {todayDone ? (
+                <View style={[s.planActionBtn, s.planActionDone]}>
+                  <Text style={s.planActionText}>Done ✓</Text>
+                </View>
+              ) : todayWorkout && !todayWorkout.isRestDay ? (
+                <TouchableOpacity
+                  style={[s.planActionBtn, s.planActionStart]}
+                  onPress={() => navigation.navigate('DailyWorkout')}
+                  activeOpacity={0.8}>
+                  <Text style={s.planActionText}>Start Workout →</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={[s.planActionBtn, s.planActionView]}>
+                  <Text style={[s.planActionText, { color: D.primary }]}>View Plan →</Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={s.planCardEmpty}
+            onPress={() => navigation.navigate('PlanSelection')}
+            activeOpacity={0.85}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.planTag}>WORKOUT PLAN</Text>
+              <Text style={s.planTitle}>Create Your Plan</Text>
+              <Text style={s.planMeta}>Get a structured workout schedule tailored to your goals.</Text>
+            </View>
+            <View style={[s.planActionBtn, s.planActionStart, { alignSelf: 'flex-end' }]}>
+              <Text style={s.planActionText}>Get Started</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* ── Quick Start ── */}
         <Text style={s.sectionTitle}>Quick Start</Text>
         <View style={s.exerciseRow}>
@@ -159,11 +227,12 @@ export function HomeScreen({ navigation }: Props) {
       </ScrollView>
       <BottomNav current="Home" navigation={navigation} />
     </SafeAreaView>
+    </AppBackground>
   );
 }
 
 const s = StyleSheet.create({
-  safe:   { flex: 1, backgroundColor: D.bg },
+  safe:   { flex: 1, backgroundColor: 'transparent' },
   scroll: { paddingHorizontal: SP.xl, paddingBottom: 96, paddingTop: SP.lg },
 
   // Top bar
@@ -214,6 +283,38 @@ const s = StyleSheet.create({
   focusBtnText:{ color: D.onPrimary, fontWeight: '700', fontSize: 14, textAlign: 'center' },
   focusImgWrap: { width: 100, height: 100, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginLeft: SP.sm },
   focusImg:    { width: 120, height: 120, resizeMode: 'contain' },
+
+  // Plan card
+  planCard: {
+    backgroundColor: D.card,
+    borderRadius: R.cardLg,
+    padding: SP.xl,
+    marginBottom: SP.xl,
+    borderWidth: 1.5,
+    borderColor: D.primary + '44',
+    ...SH.card,
+  },
+  planCardEmpty: {
+    backgroundColor: D.card,
+    borderRadius: R.cardLg,
+    padding: SP.xl,
+    marginBottom: SP.xl,
+    borderWidth: 1.5,
+    borderColor: D.border,
+    ...SH.soft,
+  },
+  planCardTop:  { flexDirection: 'row', alignItems: 'flex-start', gap: SP.md, marginBottom: SP.md },
+  planTag:      { fontSize: 10, fontWeight: '800', color: D.primary, letterSpacing: 1.8, marginBottom: SP.xs },
+  planTitle:    { fontSize: 17, fontWeight: '800', color: D.text, marginBottom: SP.xs },
+  planMeta:     { fontSize: 13, color: D.textMuted },
+  planIconWrap: { width: 56, height: 56, borderRadius: R.card, backgroundColor: D.primaryLight, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  planIcon:     { width: 48, height: 48 },
+  planCardBottom: { borderTopWidth: 1, borderColor: D.border, paddingTop: SP.md, alignItems: 'flex-start' },
+  planActionBtn:  { borderRadius: R.pill, paddingHorizontal: SP.lg, paddingVertical: SP.sm },
+  planActionStart:{ backgroundColor: D.primary },
+  planActionDone: { backgroundColor: D.accent },
+  planActionView: { backgroundColor: D.primaryLight, borderWidth: 1.5, borderColor: D.primary + '55' },
+  planActionText: { fontSize: 13, fontWeight: '700', color: D.onPrimary },
 
   // Section
   sectionTitle:{ fontSize: 16, fontWeight: '800', color: D.text, marginBottom: SP.md, marginTop: SP.sm },

@@ -16,6 +16,7 @@ const posePlugin = VisionCameraProxy.initFrameProcessorPlugin('detectPose', {});
 interface Props {
   onPoseDetected: (landmarks: PoseLandmarks) => void;
   isActive: boolean;
+  facing?: 'front' | 'back';
 }
 
 /**
@@ -24,9 +25,9 @@ interface Props {
  * The "detectPose" plugin is registered natively on Android (Kotlin).
  * It returns 33 normalised landmarks per frame.
  */
-function CameraViewInner({ onPoseDetected, isActive }: Props) {
+function CameraViewInner({ onPoseDetected, isActive, facing = 'front' }: Props) {
   const { hasPermission, requestPermission } = useCameraPermission();
-  const device = useCameraDevice('front');
+  const device = useCameraDevice(facing);
 
   useEffect(() => {
     if (!hasPermission) requestPermission();
