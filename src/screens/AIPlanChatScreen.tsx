@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/pose';
 import { AppBackground } from '../components/ui/AppBackground';
@@ -20,25 +21,28 @@ import { D, SP, R, SH } from '../theme/design';
 import { GROQ_API_KEY } from '../config/keys';
 import { buildAIPlan } from '../utils/planGenerator';
 import { useExercisePlanStore } from '../store/exercisePlanStore';
+import { ExercisePlan } from '../types/plan';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AIPlanChat'>;
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL    = 'llama-3.1-8b-instant';
 
+const WELCOME_TEXT =
+  "Hi! I'll build a personalized workout plan just for you.\n\nFirst — what's your current fitness level? Tell me what exercises you can do and roughly how many reps you manage.";
+
 const SYSTEM_PROMPT =
-  'You are a fitness plan generator for FitCounter. Collect these 4 pieces of information ONE AT A TIME:\n' +
-  '1. Current fitness level — ask what exercises they can do and how many reps they manage.\n' +
+  'You are a fitness plan generator for FitCounter. Your first message already asked about fitness level.\n' +
+  'Collect these remaining pieces ONE AT A TIME (do NOT re-ask what was already answered):\n' +
   '2. Available workout time per day in minutes.\n' +
   '3. Main fitness goal (lose weight / build muscle / improve endurance / general fitness).\n' +
-  '4. Busy days — which days of the week should be rest days (no workouts).\n\n' +
-  'Ask ONE question at a time. Be friendly and concise.\n\n' +
-  'Once you have ALL 4 answers, respond with EXACTLY this JSON and NOTHING ELSE:\n' +
+  '4. Busy days — which days of the week should be rest days.\n\n' +
+  'Ask only ONE question per reply. Be friendly and concise. Do NOT ask for fitness level again — it was already asked.\n\n' +
+  'Once you have ALL answers (fitness level + time + goal + busy days), respond with EXACTLY this JSON and NOTHING ELSE:\n' +
   '{"plan":{"title":"Custom Fitness Plan","level":"beginner","weeklySchedule":[' +
   '{"day":"Monday","isRest":false,"focus":"Full Body","exercises":[' +
   '{"name":"Push-ups","sets":3,"reps":10,"rest":60},' +
   '{"name":"Squats","sets":3,"reps":15,"rest":60},' +
-  '{"name":"Sit-ups","sets":3,"reps":12,"rest":60},' +
   '{"name":"Plank","sets":3,"duration":30,"rest":45}]},' +
   '{"day":"Tuesday","isRest":true,"focus":"Rest"},' +
   '{"day":"Wednesday","isRest":false,"focus":"Strength","exercises":[...]},' +
@@ -47,13 +51,12 @@ const SYSTEM_PROMPT =
   '{"day":"Saturday","isRest":true,"focus":"Rest"},' +
   '{"day":"Sunday","isRest":true,"focus":"Rest"}],' +
   '"progressionNote":"Add 1-2 reps each week."}}\n\n' +
-  'RULES: Replace example data with a plan for the user. Include ALL 7 days. Make busy days isRest:true. ' +
-  'Each workout day needs 3-5 exercises with sets (2-4), reps (8-20) or duration for planks, and rest seconds (30-90). ' +
-  'Set level to beginner/intermediate/advanced based on their answers. ' +
-  'Output ONLY the JSON when you have all 4 answers — no other text.';
+  'RULES: Replace ALL example data with a real plan for the user. Include ALL 7 days. ' +
+  'Make busy days isRest:true. Each workout day needs 3-5 exercises with sets (2-4), reps (8-20) or duration for planks, and rest seconds (30-90). ' +
+  'Set level to beginner/intermediate/advanced. Output ONLY valid JSON when all info is collected — no other text, no markdown.';
 
-interface GroqMsg  { role: 'system' | 'user' | 'assistant'; content: string }
-interface ChatMsg  { id: number; role: 'user' | 'bot'; text: string; isPlan?: boolean }
+interface GroqMsg { role: 'system' | 'user' | 'assistant'; content: string }
+interface ChatMsg { id: number; role: 'user' | 'bot'; text: string; plan?: ExercisePlan }
 
 function stripMarkdown(t: string): string {
   return t
@@ -73,22 +76,16 @@ function stripMarkdown(t: string): string {
 function extractPlanJson(text: string): Record<string, any> | null {
   const start = text.indexOf('{"plan"');
   if (start === -1) return null;
-  let depth = 0;
-  let end   = start;
+  let depth = 0, end = start;
   for (let i = start; i < text.length; i++) {
     if (text[i] === '{') depth++;
-    else if (text[i] === '}') {
-      depth--;
-      if (depth === 0) { end = i; break; }
-    }
+    else if (text[i] === '}') { depth--; if (depth === 0) { end = i; break; } }
   }
   try {
     const parsed = JSON.parse(text.slice(start, end + 1));
     if (parsed?.plan?.weeklySchedule?.length > 0) return parsed.plan;
     return null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 async function callGroq(history: GroqMsg[]): Promise<string> {
@@ -99,7 +96,7 @@ async function callGroq(history: GroqMsg[]): Promise<string> {
       model: MODEL,
       messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...history],
       max_tokens: 1500,
-      temperature: 0.6,
+      temperature: 0.5,
     }),
   });
   if (!res.ok) {
@@ -110,72 +107,120 @@ async function callGroq(history: GroqMsg[]): Promise<string> {
   return (data.choices?.[0]?.message?.content as string) ?? 'No response.';
 }
 
-const WELCOME: ChatMsg = {
-  id: 0,
-  role: 'bot',
-  text: "Hi! I'll build a personalized workout plan just for you.\n\nFirst — what's your current fitness level? Tell me what exercises you can do and roughly how many reps you manage.",
+const DAY_SHORT: Record<string, string> = {
+  Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed', Thursday: 'Thu',
+  Friday: 'Fri', Saturday: 'Sat', Sunday: 'Sun',
+};
+const LEVEL_COLOR: Record<string, string> = {
+  beginner: D.accent, intermediate: D.primary, advanced: D.danger,
 };
 
+function PlanCard({ plan, onFollow }: { plan: ExercisePlan; onFollow: () => void }) {
+  const workoutDays = plan.weeks[0]?.days.filter((d) => !d.isRestDay) ?? [];
+  const levelColor = LEVEL_COLOR[plan.level] ?? D.primary;
+  return (
+    <View style={pc.card}>
+      <View style={pc.cardHeader}>
+        <MaterialCommunityIcons name="dumbbell" size={18} color={D.primary} />
+        <Text style={pc.planTitle} numberOfLines={2}>{plan.title}</Text>
+      </View>
+      <View style={[pc.levelBadge, { backgroundColor: levelColor + '22' }]}>
+        <Text style={[pc.levelText, { color: levelColor }]}>{plan.level.toUpperCase()}</Text>
+      </View>
+      <View style={pc.dayRow}>
+        {workoutDays.map((day, i) => (
+          <View key={i} style={pc.dayChip}>
+            <Text style={pc.dayName}>{DAY_SHORT[['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][day.dayIndex]] ?? day.dayIndex}</Text>
+            <Text style={pc.dayFocus} numberOfLines={1}>{day.focus}</Text>
+            <Text style={pc.dayMeta}>{day.exercises.length} ex</Text>
+          </View>
+        ))}
+      </View>
+      <TouchableOpacity style={pc.followBtn} onPress={onFollow} activeOpacity={0.8}>
+        <MaterialCommunityIcons name="calendar-check" size={16} color={D.onPrimary} />
+        <Text style={pc.followText}>Follow This Plan</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const pc = StyleSheet.create({
+  card:       { backgroundColor: D.card, borderRadius: R.card, padding: SP.lg, marginTop: SP.sm, borderWidth: 1.5, borderColor: D.primaryMuted, ...SH.card },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: SP.sm, marginBottom: SP.sm },
+  planTitle:  { fontSize: 15, fontWeight: '800', color: D.text, flex: 1 },
+  levelBadge: { alignSelf: 'flex-start', borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 3, marginBottom: SP.md },
+  levelText:  { fontSize: 10, fontWeight: '800', letterSpacing: 1 },
+  dayRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: SP.sm, marginBottom: SP.lg },
+  dayChip:    { backgroundColor: D.primaryLight, borderRadius: R.md, paddingHorizontal: SP.sm, paddingVertical: SP.xs, alignItems: 'center', minWidth: 48 },
+  dayName:    { fontSize: 11, fontWeight: '800', color: D.primary },
+  dayFocus:   { fontSize: 10, color: D.textMuted, maxWidth: 56 },
+  dayMeta:    { fontSize: 9, color: D.textLight },
+  followBtn:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: SP.sm, backgroundColor: D.primary, borderRadius: R.pill, paddingVertical: SP.md, ...SH.button },
+  followText: { fontSize: 14, fontWeight: '800', color: D.onPrimary },
+});
+
 export function AIPlanChatScreen({ navigation }: Props) {
-  const [messages, setMessages] = useState<ChatMsg[]>([WELCOME]);
-  const [input,    setInput]    = useState('');
-  const [loading,  setLoading]  = useState(false);
+  const WELCOME: ChatMsg = { id: 0, role: 'bot', text: WELCOME_TEXT };
+  const [messages,  setMessages]  = useState<ChatMsg[]>([WELCOME]);
+  const [input,     setInput]     = useState('');
+  const [loading,   setLoading]   = useState(false);
   const [planSaved, setPlanSaved] = useState(false);
   const scrollRef   = useRef<ScrollView>(null);
   const idRef       = useRef(1);
-  const historyRef  = useRef<GroqMsg[]>([]);
   const setActivePlan = useExercisePlanStore((s) => s.setActivePlan);
+
+  // Seed history with welcome so AI knows Q1 was already asked
+  const historyRef = useRef<GroqMsg[]>([
+    { role: 'assistant', content: WELCOME_TEXT },
+  ]);
 
   const send = async () => {
     const q = input.trim();
     if (!q || loading || planSaved) return;
 
-    const userMsg: ChatMsg = { id: idRef.current++, role: 'user', text: q };
-    setMessages((prev) => [...prev, userMsg]);
+    setMessages((prev) => [...prev, { id: idRef.current++, role: 'user', text: q }]);
     setInput('');
     setLoading(true);
 
     historyRef.current = [...historyRef.current, { role: 'user', content: q }];
-    if (historyRef.current.length > 20) historyRef.current = historyRef.current.slice(-20);
+    if (historyRef.current.length > 22) historyRef.current = historyRef.current.slice(-22);
 
-    let botText = '';
-    let planDetected = false;
+    let botMsg: ChatMsg;
 
     try {
       const raw = await callGroq(historyRef.current);
       const planJson = extractPlanJson(raw);
 
       if (planJson) {
-        planDetected = true;
         try {
-          const plan = buildAIPlan(planJson, {
-            timePerDayMinutes: 30,
-            currentWeightKg:   0,
-            goalWeightKg:      0,
-            heightCm:          0,
-          });
-          setActivePlan(plan);
+          const plan = buildAIPlan(planJson, { timePerDayMinutes: 30, currentWeightKg: 0, goalWeightKg: 0, heightCm: 0 });
+          botMsg = {
+            id: idRef.current++,
+            role: 'bot',
+            text: `Your personalised plan "${plan.title}" is ready! Review it below and tap Follow to add it to your schedule.`,
+            plan,
+          };
           setPlanSaved(true);
-          botText = `Your plan "${plan.title ?? 'AI Custom Plan'}" is ready! Tap "View Plan" below to see your weekly schedule.`;
         } catch {
-          botText = 'I generated a plan but had trouble saving it. Please try again.';
-          planDetected = false;
+          botMsg = { id: idRef.current++, role: 'bot', text: 'I generated a plan but had trouble parsing it. Please try again.' };
         }
       } else {
-        botText = stripMarkdown(raw);
+        botMsg = { id: idRef.current++, role: 'bot', text: stripMarkdown(raw) };
       }
 
       historyRef.current = [...historyRef.current, { role: 'assistant', content: raw }];
-    } catch (err: unknown) {
-      botText = `⚠️ ${err instanceof Error ? err.message : 'Something went wrong. Check your connection.'}`;
+    } catch (err) {
+      botMsg = { id: idRef.current++, role: 'bot', text: `Something went wrong: ${err instanceof Error ? err.message : 'Check your connection.'}` };
     }
 
-    setMessages((prev) => [
-      ...prev,
-      { id: idRef.current++, role: 'bot', text: botText, isPlan: planDetected },
-    ]);
+    setMessages((prev) => [...prev, botMsg]);
     setLoading(false);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+  };
+
+  const handleFollow = (plan: ExercisePlan) => {
+    setActivePlan(plan);
+    navigation.replace('ExercisePlan');
   };
 
   return (
@@ -192,7 +237,7 @@ export function AIPlanChatScreen({ navigation }: Props) {
             <Image source={require('../../Elements/AiChatBot.png')} style={s.botIcon} resizeMode="cover" />
             <View>
               <Text style={s.headerTitle}>AI Plan Generator</Text>
-              <Text style={s.headerSub}>Powered by Groq · mentions busy days → rest days</Text>
+              <Text style={s.headerSub}>Powered by Groq</Text>
             </View>
           </View>
         </View>
@@ -209,20 +254,14 @@ export function AIPlanChatScreen({ navigation }: Props) {
               {msg.role === 'bot' && (
                 <Image source={require('../../Elements/AiChatBot.png')} style={s.avatar} resizeMode="cover" />
               )}
-              <View>
+              <View style={{ flex: 1 }}>
                 <View style={[s.bubble, msg.role === 'user' ? s.bubbleUser : s.bubbleBot]}>
                   <Text style={[s.bubbleText, msg.role === 'user' ? s.bubbleTxtUser : s.bubbleTxtBot]}>
                     {msg.text}
                   </Text>
                 </View>
-                {msg.isPlan && (
-                  <TouchableOpacity
-                    style={s.viewPlanBtn}
-                    onPress={() => navigation.replace('ExercisePlan')}
-                    activeOpacity={0.8}>
-                    <Text style={s.viewPlanText}>View Plan →</Text>
-                    <Feather name="arrow-right" size={14} color={D.onPrimary} />
-                  </TouchableOpacity>
+                {msg.plan && (
+                  <PlanCard plan={msg.plan} onFollow={() => handleFollow(msg.plan!)} />
                 )}
               </View>
             </View>
@@ -241,13 +280,7 @@ export function AIPlanChatScreen({ navigation }: Props) {
         {planSaved ? (
           <View style={s.savedBar}>
             <Feather name="check-circle" size={18} color={D.accent} />
-            <Text style={s.savedText}>Plan saved!</Text>
-            <TouchableOpacity
-              style={s.savedBtn}
-              onPress={() => navigation.replace('ExercisePlan')}
-              activeOpacity={0.8}>
-              <Text style={s.savedBtnText}>View Plan</Text>
-            </TouchableOpacity>
+            <Text style={s.savedText}>Plan ready — tap "Follow This Plan" above</Text>
           </View>
         ) : (
           <View style={s.inputBar}>
@@ -289,48 +322,32 @@ const s = StyleSheet.create({
   msgList:    { flex: 1 },
   msgContent: { paddingHorizontal: SP.xl, paddingVertical: SP.lg, gap: SP.md },
 
-  msgRow:     { flexDirection: 'row', alignItems: 'flex-end', gap: SP.sm, maxWidth: '88%' },
+  msgRow:     { flexDirection: 'row', alignItems: 'flex-start', gap: SP.sm, maxWidth: '92%' },
   msgRowUser: { alignSelf: 'flex-end', flexDirection: 'row-reverse' },
   msgRowBot:  { alignSelf: 'flex-start' },
-  avatar:     { width: 30, height: 30, borderRadius: 15, backgroundColor: D.primaryLight },
+  avatar:     { width: 30, height: 30, borderRadius: 15, backgroundColor: D.primaryLight, marginTop: 2 },
 
-  bubble:        { borderRadius: R.card, paddingHorizontal: SP.base, paddingVertical: SP.md, maxWidth: '100%' },
+  bubble:        { borderRadius: R.card, paddingHorizontal: SP.base, paddingVertical: SP.md },
   bubbleUser:    { backgroundColor: D.primary, borderBottomRightRadius: 4, ...SH.soft },
   bubbleBot:     { backgroundColor: D.card, borderBottomLeftRadius: 4, minWidth: 48, alignItems: 'center', ...SH.soft },
   bubbleText:    { fontSize: 14, lineHeight: 21 },
   bubbleTxtUser: { color: D.onPrimary },
   bubbleTxtBot:  { color: D.text },
 
-  viewPlanBtn:  { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: D.accent, borderRadius: R.pill, paddingHorizontal: SP.base, paddingVertical: SP.sm, marginTop: SP.sm, alignSelf: 'flex-start', ...SH.soft },
-  viewPlanText: { color: D.onPrimary, fontSize: 13, fontWeight: '700' },
-
   inputBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SP.sm,
-    paddingHorizontal: SP.xl,
-    paddingVertical: SP.md,
-    borderTopWidth: 1,
-    borderColor: D.border,
-    backgroundColor: D.card,
+    flexDirection: 'row', alignItems: 'center', gap: SP.sm,
+    paddingHorizontal: SP.xl, paddingVertical: SP.md,
+    borderTopWidth: 1, borderColor: D.border, backgroundColor: D.card,
   },
   input: {
-    flex: 1,
-    backgroundColor: D.bg,
-    borderRadius: R.md,
-    paddingHorizontal: SP.base,
-    paddingVertical: SP.md,
-    fontSize: 14,
-    color: D.text,
-    maxHeight: 100,
-    borderWidth: 1.5,
-    borderColor: D.border,
+    flex: 1, backgroundColor: D.bg, borderRadius: R.md,
+    paddingHorizontal: SP.base, paddingVertical: SP.md,
+    fontSize: 14, color: D.text, maxHeight: 100,
+    borderWidth: 1.5, borderColor: D.border,
   },
   sendBtn:    { width: 44, height: 44, borderRadius: 22, backgroundColor: D.primary, alignItems: 'center', justifyContent: 'center', ...SH.button },
   sendBtnOff: { backgroundColor: D.border, shadowOpacity: 0, elevation: 0 },
 
-  savedBar:     { flexDirection: 'row', alignItems: 'center', gap: SP.md, paddingHorizontal: SP.xl, paddingVertical: SP.base, borderTopWidth: 1, borderColor: D.border, backgroundColor: D.card },
-  savedText:    { flex: 1, fontSize: 14, fontWeight: '600', color: D.accent },
-  savedBtn:     { backgroundColor: D.primary, borderRadius: R.pill, paddingHorizontal: SP.lg, paddingVertical: SP.sm },
-  savedBtnText: { color: D.onPrimary, fontSize: 13, fontWeight: '700' },
+  savedBar:  { flexDirection: 'row', alignItems: 'center', gap: SP.md, paddingHorizontal: SP.xl, paddingVertical: SP.base, borderTopWidth: 1, borderColor: D.border, backgroundColor: D.accentLight },
+  savedText: { flex: 1, fontSize: 13, fontWeight: '600', color: D.accentDark },
 });

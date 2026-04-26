@@ -38,6 +38,7 @@ interface FocusStore {
   sessionEndTime: number | null;     // timestamp when timer expires
   violations: Violation[];
   currentViolation: Violation | null;
+  abandoned: boolean;                // true if user quit early
 
   // Debt – accumulated sets owed across sessions
   pendingSets: number;
@@ -53,6 +54,7 @@ interface FocusStore {
   addProceedPenalty: (packageName: string) => void;
   acknowledgeWarning: () => void;
   endSession: () => void;
+  abandonSession: () => void;
   resetSession: () => void;
   payDebt: (sets: number) => void;
   resetAll: () => void;
@@ -74,6 +76,7 @@ export const useFocusStore = create<FocusStore>((set, get) => ({
   sessionEndTime: null,
   violations: [],
   currentViolation: null,
+  abandoned: false,
 
   pendingSets: 0,
   softPenaltyPushups: 0,
@@ -135,7 +138,8 @@ export const useFocusStore = create<FocusStore>((set, get) => ({
     set({ sessionState: 'active', currentViolation: null });
   },
 
-  endSession: () => set({ sessionState: 'completed' }),
+  endSession: () => set({ sessionState: 'completed', abandoned: false }),
+  abandonSession: () => set({ sessionState: 'completed', abandoned: true }),
 
   resetSession: () =>
     set({
@@ -145,6 +149,7 @@ export const useFocusStore = create<FocusStore>((set, get) => ({
       violations: [],
       currentViolation: null,
       softPenaltyPushups: 0,
+      abandoned: false,
     }),
 
   payDebt: (sets) =>
@@ -165,5 +170,6 @@ export const useFocusStore = create<FocusStore>((set, get) => ({
       currentViolation: null,
       pendingSets: 0,
       softPenaltyPushups: 0,
+      abandoned: false,
     }),
 }));

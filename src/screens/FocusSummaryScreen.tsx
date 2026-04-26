@@ -26,22 +26,22 @@ function getAppLabel(pkg: string): string {
 }
 
 export function FocusSummaryScreen({ navigation }: Props) {
-  const { timerMinutes, violations, pendingSets, resetSession } = useFocusStore();
+  const { timerMinutes, violations, pendingSets, abandoned, resetSession } = useFocusStore();
   const user = useAuthStore((s) => s.user);
   const { addXP } = useXPStore();
   const xpAwarded = useRef(false);
 
   const totalViolations = violations.length;
-  const clean = totalViolations === 0;
-  const pct = clean ? 100 : Math.max(0, Math.round(100 - totalViolations * 15));
+  const clean = totalViolations === 0 && !abandoned;
+  const pct = abandoned ? 0 : clean ? 100 : Math.max(0, Math.round(100 - totalViolations * 15));
 
   useEffect(() => {
-    if (!user || xpAwarded.current) return;
+    if (!user || xpAwarded.current || abandoned) return;
     xpAwarded.current = true;
     let xp = 50;
     if (clean) xp += 30;
     addXP(user.uid, xp);
-  }, [user, addXP, clean]);
+  }, [user, addXP, clean, abandoned]);
 
   const handleDone = () => {
     resetSession();
@@ -55,16 +55,20 @@ export function FocusSummaryScreen({ navigation }: Props) {
 
         {/* Illustration */}
         <Image
-          source={clean
-            ? require('../../Elements/SuccessReward.png')
-            : require('../../Elements/SomeThingWrong.png')}
+          source={abandoned
+            ? require('../../Elements/EmptyState.png')
+            : clean
+              ? require('../../Elements/SuccessReward.png')
+              : require('../../Elements/SomeThingWrong.png')}
           style={s.illustration}
           resizeMode="contain"
         />
 
         {/* Tag + title */}
-        <Text style={s.tag}>SESSION COMPLETE</Text>
-        <Text style={s.headline}>{clean ? 'Perfect Focus! 🎉' : 'Session Report'}</Text>
+        <Text style={s.tag}>{abandoned ? 'SESSION ABANDONED' : 'SESSION COMPLETE'}</Text>
+        <Text style={s.headline}>
+          {abandoned ? 'You Gave Up' : clean ? 'Perfect Focus!' : 'Session Report'}
+        </Text>
 
         {/* Score card */}
         <Card style={s.scoreCard} padding={SP.xl}>
@@ -98,16 +102,18 @@ export function FocusSummaryScreen({ navigation }: Props) {
           ))}
         </View>
 
-        {/* XP earned */}
-        <Card style={s.xpCard} variant="primary" padding={SP.lg}>
-          <View style={s.xpRow}>
-            <Text style={s.xpIcon}>⚡</Text>
-            <View>
-              <Text style={s.xpTitle}>XP Earned</Text>
-              <Text style={s.xpAmount}>+{clean ? 80 : 50} XP</Text>
+        {/* XP earned — hidden when abandoned */}
+        {!abandoned && (
+          <Card style={s.xpCard} variant="primary" padding={SP.lg}>
+            <View style={s.xpRow}>
+              <Text style={s.xpIcon}>⚡</Text>
+              <View>
+                <Text style={s.xpTitle}>XP Earned</Text>
+                <Text style={s.xpAmount}>+{clean ? 80 : 50} XP</Text>
+              </View>
             </View>
-          </View>
-        </Card>
+          </Card>
+        )}
 
         {/* Violations breakdown */}
         {totalViolations > 0 && (
@@ -126,8 +132,10 @@ export function FocusSummaryScreen({ navigation }: Props) {
         {/* Message */}
         <Card style={s.msgCard} variant="muted" padding={SP.lg}>
           <Text style={s.msgText}>
-            {clean
-              ? 'Amazing discipline! Your focus is your superpower. Keep it up! 💪'
+            {abandoned
+            ? "You ended the session early. No XP awarded. Come back stronger next time."
+            : clean
+              ? 'Amazing discipline! Your focus is your superpower. Keep it up!'
               : pendingSets > 0
                 ? `You have ${pendingSets} set${pendingSets !== 1 ? 's' : ''} to pay off. Head to the Home screen to clear your debt.`
                 : 'Violations noted. Work on holding focus for longer next time.'}

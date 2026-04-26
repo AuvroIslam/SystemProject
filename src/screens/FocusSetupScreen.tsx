@@ -1,321 +1,322 @@
 import React from 'react';
 import {
-  StyleSheet,
-  View,
-  Text,
-  TouchableOpacity,
   SafeAreaView,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import Feather from 'react-native-vector-icons/Feather';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList, ExerciseType } from '../types/pose';
-import {
-  useFocusStore,
-  AVAILABLE_APPS,
-} from '../store/focusStore';
+import { useFocusStore, AVAILABLE_APPS } from '../store/focusStore';
 import { useAppMonitorPermission } from '../hooks/useAppMonitorPermission';
-import { C, SHADOW } from '../theme/atelier';
+import { NativeModules } from 'react-native';
+import { AppBackground } from '../components/ui/AppBackground';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { D, SP, R, SH } from '../theme/design';
+
+const { AppMonitor } = NativeModules;
 
 type Props = NativeStackScreenProps<RootStackParamList, 'FocusSetup'>;
 
 const TIMER_OPTIONS = [15, 25, 30, 45, 60, 90, 120];
-const REP_OPTIONS = [5, 10, 15, 20, 30];
+const REP_OPTIONS   = [5, 10, 15, 20, 30];
+
 const EXERCISE_OPTIONS: { type: ExerciseType; label: string; icon: string }[] = [
-  { type: 'pushup', label: 'Push-ups', icon: '💪' },
-  { type: 'situp', label: 'Sit-ups', icon: '🏋️' },
-  { type: 'squat', label: 'Squats', icon: '🦵' },
+  { type: 'pushup', label: 'Push-ups', icon: 'arm-flex'         },
+  { type: 'situp',  label: 'Sit-ups',  icon: 'human-handsdown'  },
+  { type: 'squat',  label: 'Squats',   icon: 'human-child'      },
 ];
+
+const APP_ICON_MAP: Record<string, string> = {
+  'com.google.android.youtube':  'youtube',
+  'com.instagram.android':       'instagram',
+  'com.facebook.katana':         'facebook',
+  'com.twitter.android':         'twitter',
+  'com.zhiliaoapp.musically':    'music-note',
+  'com.snapchat.android':        'snapchat',
+  'com.reddit.frontpage':        'reddit',
+  'com.whatsapp':                'whatsapp',
+  'org.telegram.messenger':      'telegram',
+  'com.discord':                 'discord',
+  'com.netflix.mediaclient':     'netflix',
+  'com.spotify.music':           'spotify',
+};
 
 export function FocusSetupScreen({ navigation }: Props) {
   const {
-    timerMinutes,
-    blockedApps,
-    penaltyReps,
-    penaltyExercise,
-    setTimerMinutes,
-    setPenaltyReps,
-    setPenaltyExercise,
-    toggleBlockedApp,
-    startSession,
+    timerMinutes, blockedApps, penaltyReps, penaltyExercise,
+    setTimerMinutes, setPenaltyReps, setPenaltyExercise,
+    toggleBlockedApp, startSession,
   } = useFocusStore();
 
   const {
-    hasPermission,
-    hasAccessibilityPermission,
-    hasUsagePermission,
-    requestPermission,
-    requestNotificationPermission,
-  } =
-    useAppMonitorPermission();
+    hasPermission, hasAccessibilityPermission, hasUsagePermission,
+    requestPermission, requestNotificationPermission,
+  } = useAppMonitorPermission();
 
-  const canStart = blockedApps.length > 0;
+  const canStart = blockedApps.length > 0 && hasAccessibilityPermission;
 
   const handleStart = async () => {
-    if (!hasPermission) {
-      requestPermission();
-      return;
-    }
     await requestNotificationPermission();
     startSession();
     navigation.replace('FocusActive');
   };
 
-  return (
-    <SafeAreaView style={s.safe}>
-      <ScrollView contentContainerStyle={s.scroll}>
-        {/* ── Header ── */}
-        <Text style={s.label}>FOCUS MODE</Text>
-        <Text style={s.headline}>Configure Your{'\n'}Session</Text>
-        <Text style={s.subhead}>
-          Discipline through accountability. Procrastinate = exercise debt.
-        </Text>
+  const startLabel = blockedApps.length === 0
+    ? 'Select at least one app to block'
+    : !hasPermission
+      ? 'Grant Usage Access to Continue'
+      : !hasAccessibilityPermission
+        ? 'Enable Accessibility Service to Start'
+        : `Start ${timerMinutes} Min Focus`;
 
-        {/* ── Timer Duration ── */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>FOCUS DURATION</Text>
-          <View style={s.chips}>
-            {TIMER_OPTIONS.map((m) => (
-              <TouchableOpacity
-                key={m}
-                style={[s.chip, timerMinutes === m && s.chipActive]}
-                onPress={() => setTimerMinutes(m)}>
-                <Text
-                  style={[
-                    s.chipText,
-                    timerMinutes === m && s.chipTextActive,
-                  ]}>
-                  {m >= 60 ? `${m / 60}h` : `${m}m`}
-                </Text>
-              </TouchableOpacity>
-            ))}
+  return (
+    <AppBackground variant={1}>
+    <SafeAreaView style={s.safe}>
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+
+        {/* Header */}
+        <View style={s.header}>
+          <View style={s.iconWrap}>
+            <MaterialCommunityIcons name="lightning-bolt" size={22} color={D.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.tag}>FOCUS MODE</Text>
+            <Text style={s.title}>Configure Session</Text>
           </View>
         </View>
+        <Text style={s.sub}>Discipline through accountability. Procrastinate = exercise debt.</Text>
 
-        {/* ── Blocked Apps ── */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>RESTRICTED APPS</Text>
-          <View style={s.appGrid}>
-            {AVAILABLE_APPS.map((app) => {
-              const selected = blockedApps.includes(app.packageName);
+        {/* Focus Duration */}
+        <Card style={s.card} padding={SP.xl}>
+          <View style={s.sectionHeader}>
+            <MaterialCommunityIcons name="timer-outline" size={16} color={D.primary} />
+            <Text style={s.sectionTitle}>Focus Duration</Text>
+          </View>
+          <View style={s.chipRow}>
+            {TIMER_OPTIONS.map((m) => {
+              const active = timerMinutes === m;
               return (
                 <TouchableOpacity
-                  key={app.packageName}
-                  style={[s.appChip, selected && s.appChipActive]}
-                  onPress={() => toggleBlockedApp(app.packageName)}>
-                  <Text style={s.appIcon}>{app.icon}</Text>
-                  <Text
-                    style={[
-                      s.appLabel,
-                      selected && s.appLabelActive,
-                    ]}>
-                    {app.label}
+                  key={m}
+                  style={[s.chip, active && s.chipActive]}
+                  onPress={() => setTimerMinutes(m)}
+                  activeOpacity={0.75}>
+                  <Text style={[s.chipText, active && s.chipTextActive]}>
+                    {m >= 60 ? `${m / 60}h` : `${m}m`}
                   </Text>
                 </TouchableOpacity>
               );
             })}
           </View>
-        </View>
+        </Card>
 
-        {/* ── Penalty Exercise ── */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>PUNISHMENT EXERCISE</Text>
-          <View style={s.chips}>
-            {EXERCISE_OPTIONS.map((ex) => (
-              <TouchableOpacity
-                key={ex.type}
-                style={[
-                  s.chip,
-                  s.chipWide,
-                  penaltyExercise === ex.type && s.chipActive,
-                ]}
-                onPress={() => setPenaltyExercise(ex.type)}>
-                <Text
-                  style={[
-                    s.chipText,
-                    penaltyExercise === ex.type && s.chipTextActive,
-                  ]}>
-                  {ex.icon} {ex.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+        {/* Restricted Apps */}
+        <Card style={s.card} padding={SP.xl}>
+          <View style={s.sectionHeader}>
+            <MaterialCommunityIcons name="shield-lock-outline" size={16} color={D.primary} />
+            <Text style={s.sectionTitle}>Restricted Apps</Text>
           </View>
-        </View>
-
-        {/* ── Penalty Reps ── */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>REPS PER VIOLATION</Text>
-          <View style={s.chips}>
-            {REP_OPTIONS.map((r) => (
-              <TouchableOpacity
-                key={r}
-                style={[s.chip, penaltyReps === r && s.chipActive]}
-                onPress={() => setPenaltyReps(r)}>
-                <Text
-                  style={[
-                    s.chipText,
-                    penaltyReps === r && s.chipTextActive,
-                  ]}>
-                  {r}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View style={s.chipRow}>
+            {AVAILABLE_APPS.map((app) => {
+              const selected = blockedApps.includes(app.packageName);
+              const iconName = APP_ICON_MAP[app.packageName] ?? 'application-outline';
+              return (
+                <TouchableOpacity
+                  key={app.packageName}
+                  style={[s.appChip, selected && s.appChipActive]}
+                  onPress={() => toggleBlockedApp(app.packageName)}
+                  activeOpacity={0.75}>
+                  <MaterialCommunityIcons
+                    name={iconName}
+                    size={16}
+                    color={selected ? D.onPrimary : D.primary}
+                  />
+                  <Text style={[s.appLabel, selected && s.appLabelActive]}>{app.label}</Text>
+                  {selected && <Feather name="check" size={11} color={D.onPrimary} />}
+                </TouchableOpacity>
+              );
+            })}
           </View>
-        </View>
+        </Card>
 
-        {/* ── Permission Notice ── */}
+        {/* Punishment Exercise */}
+        <Card style={s.card} padding={SP.xl}>
+          <View style={s.sectionHeader}>
+            <MaterialCommunityIcons name="dumbbell" size={16} color={D.primary} />
+            <Text style={s.sectionTitle}>Punishment Exercise</Text>
+          </View>
+          <View style={s.chipRow}>
+            {EXERCISE_OPTIONS.map((ex) => {
+              const active = penaltyExercise === ex.type;
+              return (
+                <TouchableOpacity
+                  key={ex.type}
+                  style={[s.exChip, active && s.chipActive]}
+                  onPress={() => setPenaltyExercise(ex.type)}
+                  activeOpacity={0.75}>
+                  <MaterialCommunityIcons
+                    name={ex.icon}
+                    size={18}
+                    color={active ? D.onPrimary : D.primary}
+                  />
+                  <Text style={[s.chipText, active && s.chipTextActive]}>{ex.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Card>
+
+        {/* Reps Per Violation */}
+        <Card style={s.card} padding={SP.xl}>
+          <View style={s.sectionHeader}>
+            <MaterialCommunityIcons name="repeat" size={16} color={D.primary} />
+            <Text style={s.sectionTitle}>Reps Per Violation</Text>
+          </View>
+          <View style={s.chipRow}>
+            {REP_OPTIONS.map((r) => {
+              const active = penaltyReps === r;
+              return (
+                <TouchableOpacity
+                  key={r}
+                  style={[s.chip, active && s.chipActive]}
+                  onPress={() => setPenaltyReps(r)}
+                  activeOpacity={0.75}>
+                  <Text style={[s.chipText, active && s.chipTextActive]}>{r}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Card>
+
+        {/* Permission Notice */}
+        {/* No permission at all */}
         {!hasPermission && (
           <View style={s.permBox}>
-            <Text style={s.permText}>
-              Enable Accessibility Service (preferred) or Usage Access (fallback)
-              so restricted apps are detected in real-time.
-              Tap START to open settings.
-            </Text>
+            <MaterialCommunityIcons name="alert-circle-outline" size={16} color={D.warning} style={{ marginTop: 1 }} />
+            <View style={{ flex: 1, gap: SP.sm }}>
+              <Text style={s.permText}>
+                Usage Access is required to detect restricted apps. Grant it first, then enable Accessibility Service to start.
+              </Text>
+              <TouchableOpacity style={s.grantBtn} onPress={requestPermission} activeOpacity={0.8}>
+                <MaterialCommunityIcons name="shield-check-outline" size={14} color={D.onPrimary} />
+                <Text style={s.grantBtnText}>Grant Usage Access</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
-        {hasPermission && !hasAccessibilityPermission && hasUsagePermission && (
+        {/* Has usage access but not accessibility — block start, show accessibility grant */}
+        {hasUsagePermission && !hasAccessibilityPermission && (
           <View style={s.permBox}>
-            <Text style={s.permText}>
-              Using Usage Access fallback. For faster detection, also enable
-              Accessibility Service.
-            </Text>
+            <MaterialCommunityIcons name="shield-lock-outline" size={16} color={D.warning} style={{ marginTop: 1 }} />
+            <View style={{ flex: 1, gap: SP.sm }}>
+              <Text style={s.permText}>
+                Accessibility Service is required to detect apps in real-time. Enable it to start your session.
+              </Text>
+              <TouchableOpacity
+                style={s.grantBtn}
+                onPress={() => AppMonitor?.requestAccessibilityPermission?.()}
+                activeOpacity={0.8}>
+                <MaterialCommunityIcons name="shield-check-outline" size={14} color={D.onPrimary} />
+                <Text style={s.grantBtnText}>Enable Accessibility Service</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
-        {/* ── Start Button ── */}
-        <TouchableOpacity
-          style={[s.startBtn, !canStart && s.startBtnDisabled]}
+        <Button
+          label={startLabel}
           onPress={handleStart}
+          variant="primary"
+          fullWidth
+          style={[s.startBtn, !canStart && s.startBtnDisabled]}
           disabled={!canStart}
-          activeOpacity={0.8}>
-          <Text style={s.startBtnText}>
-            {!canStart
-              ? 'Select at least one app to block'
-              : !hasPermission
-                ? 'GRANT PERMISSION & START'
-                : !hasAccessibilityPermission && hasUsagePermission
-                  ? `START ${timerMinutes} MIN (FALLBACK MODE)`
-                : `START ${timerMinutes} MIN FOCUS`}
-          </Text>
-        </TouchableOpacity>
+        />
+
+        <View style={{ height: 24 }} />
       </ScrollView>
     </SafeAreaView>
+    </AppBackground>
   );
 }
 
-/* ───────────── Styles ───────────── */
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.surface },
-  scroll: { padding: 24, paddingBottom: 72 },
+  safe:   { flex: 1, backgroundColor: 'transparent' },
+  scroll: { paddingHorizontal: SP.xl, paddingTop: SP.lg, paddingBottom: 40 },
 
-  /* Header */
-  label: {
-    color: C.secondary,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2.5,
-    marginTop: 20,
-    marginBottom: 6,
-  },
-  headline: {
-    color: C.primaryContainer,
-    fontSize: 30,
-    fontWeight: '800',
-    lineHeight: 36,
-    marginBottom: 6,
-  },
-  subhead: {
-    color: C.onSurfaceVariant,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 28,
-  },
+  header:   { flexDirection: 'row', alignItems: 'center', gap: SP.md, marginBottom: SP.sm },
+  iconWrap: { width: 44, height: 44, borderRadius: R.md, backgroundColor: D.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  tag:      { fontSize: 10, fontWeight: '800', color: D.primary, letterSpacing: 2, marginBottom: 2 },
+  title:    { fontSize: 22, fontWeight: '800', color: D.text },
+  sub:      { fontSize: 13, color: D.textMuted, lineHeight: 19, marginBottom: SP.xl },
 
-  /* Section */
-  section: {
-    backgroundColor: C.surfaceContainerLow,
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    color: C.onSurfaceVariant,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 2,
-    marginBottom: 14,
-  },
+  card: { marginBottom: SP.md },
 
-  /* Chips */
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: SP.sm, marginBottom: SP.md },
+  sectionTitle:  { fontSize: 13, fontWeight: '800', color: D.text },
+
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SP.sm },
+
   chip: {
-    backgroundColor: C.surfaceContainerHigh,
-    borderRadius: 12,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    backgroundColor: D.primaryLight,
+    borderRadius: R.pill,
+    paddingHorizontal: SP.lg,
+    paddingVertical: SP.sm,
     borderWidth: 1.5,
     borderColor: 'transparent',
   },
-  chipWide: { paddingHorizontal: 16 },
-  chipActive: {
-    backgroundColor: C.primaryContainer,
-    borderColor: C.primaryContainer,
-  },
-  chipText: { color: C.onSurfaceVariant, fontSize: 15, fontWeight: '600' },
-  chipTextActive: { color: C.onPrimary },
-
-  /* App Grid */
-  appGrid: {
+  exChip: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+    alignItems: 'center',
+    gap: SP.xs,
+    backgroundColor: D.primaryLight,
+    borderRadius: R.pill,
+    paddingHorizontal: SP.md,
+    paddingVertical: SP.sm,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
   },
+  chipActive:    { backgroundColor: D.primary, borderColor: D.primary, ...SH.soft },
+  chipText:      { fontSize: 14, fontWeight: '600', color: D.primary },
+  chipTextActive:{ color: D.onPrimary, fontWeight: '700' },
+
   appChip: {
-    backgroundColor: C.surfaceContainerHigh,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: SP.xs,
+    backgroundColor: D.primaryLight,
+    borderRadius: R.pill,
+    paddingHorizontal: SP.md,
+    paddingVertical: SP.sm,
     borderWidth: 1.5,
     borderColor: 'transparent',
   },
-  appChipActive: {
-    backgroundColor: C.errorContainer,
-    borderColor: C.error,
-  },
-  appIcon: { fontSize: 18, marginRight: 6 },
-  appLabel: { color: C.onSurfaceVariant, fontSize: 14, fontWeight: '600' },
-  appLabelActive: { color: C.onErrorContainer },
+  appChipActive: { backgroundColor: D.primary, borderColor: D.primary, ...SH.soft },
+  appLabel:      { fontSize: 13, fontWeight: '600', color: D.primary },
+  appLabelActive:{ color: D.onPrimary },
 
-  /* Start Button */
-  startBtn: {
-    backgroundColor: C.secondary,
-    borderRadius: 16,
-    paddingVertical: 18,
-    alignItems: 'center',
-    marginTop: 12,
-    ...SHADOW.button,
-  },
-  startBtnDisabled: {
-    backgroundColor: C.surfaceContainerHigh,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  startBtnText: { color: C.onPrimary, fontSize: 14, fontWeight: '800', letterSpacing: 1 },
-
-  /* Permission Box */
   permBox: {
-    backgroundColor: C.errorContainer,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: C.error,
+    flexDirection: 'row',
+    gap: SP.sm,
+    backgroundColor: D.warningLight,
+    borderRadius: R.md,
+    padding: SP.md,
+    marginBottom: SP.md,
+    borderWidth: 1,
+    borderColor: D.warning + '66',
   },
-  permText: { color: C.onErrorContainer, fontSize: 13, lineHeight: 20 },
+  permBoxInfo: { backgroundColor: D.primaryLight, borderColor: D.primary + '44' },
+  permText:    { flex: 1, fontSize: 13, color: D.text, lineHeight: 19 },
+
+  grantBtn:     { flexDirection: 'row', alignItems: 'center', gap: SP.xs, alignSelf: 'flex-start', backgroundColor: D.primary, borderRadius: R.pill, paddingHorizontal: SP.md, paddingVertical: SP.xs, ...SH.soft },
+  grantBtnText: { fontSize: 13, fontWeight: '700', color: D.onPrimary },
+
+  startBtn:         { marginTop: SP.sm, ...SH.button },
+  startBtnDisabled: { opacity: 0.45, shadowOpacity: 0, elevation: 0 },
 });

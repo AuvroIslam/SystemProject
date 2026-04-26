@@ -9,6 +9,8 @@ apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
  * By default you don't need to apply any configuration, just uncomment the lines you need.
  */
 react {
+    bundleInDebug = true
+
     /* Folders */
     //   The root of your project, i.e. where "package.json" lives. Default is '..'
     // root = file("../")

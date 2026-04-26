@@ -1,4 +1,4 @@
-import auth from '@react-native-firebase/auth';
+import auth, { GoogleAuthProvider } from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import {
   GoogleSignin,
@@ -84,7 +84,7 @@ export async function signInWithGoogle() {
     );
   }
 
-  const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+  const googleCredential = GoogleAuthProvider.credential(idToken);
   const result = await auth().signInWithCredential(googleCredential);
 
   // Store access token for Google Calendar sync (non-critical if it fails)
