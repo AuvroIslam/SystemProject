@@ -8,14 +8,6 @@
   Your phone distractions become your workout.
 </p>
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Platform-Android-3DDC84?style=flat-square&logo=android&logoColor=white" />
-  <img src="https://img.shields.io/badge/React_Native-0.74-61DAFB?style=flat-square&logo=react&logoColor=white" />
-  <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square&logo=typescript&logoColor=white" />
-  <img src="https://img.shields.io/badge/ML_Kit-Pose_Detection-4285F4?style=flat-square&logo=google&logoColor=white" />
-  <img src="https://img.shields.io/badge/Firebase-Auth_+_Firestore-FFCA28?style=flat-square&logo=firebase&logoColor=black" />
-</p>
-
 ---
 
 ## What is FitCounter?
@@ -30,15 +22,12 @@ The camera counts your reps in real time and scores your form. You cannot fake i
 
 ## Screenshots
 
-<p align="center">
-  <img src="ImagesForGithub/Phone2.png" width="220" alt="Home Screen" />
-  &nbsp;&nbsp;
-  <img src="ImagesForGithub/Phone1.png" width="220" alt="Live Rep Counting" />
-  &nbsp;&nbsp;
-  <img src="ImagesForGithub/phone3.png" width="220" alt="AI Coach Chat" />
-  &nbsp;&nbsp;
-  <img src="ImagesForGithub/Phone4.png" width="220" alt="Workout Plan & Calendar" />
-</p>
+<table align="center"><tr>
+  <td align="center"><img src="ImagesForGithub/Phone2.png" width="180" height="360" style="object-fit:cover;border-radius:12px" alt="Live Rep Counting" /><br/><sub>Live Rep Counting</sub></td>
+  <td align="center"><img src="ImagesForGithub/Phone1.png" width="180" height="360" style="object-fit:cover;border-radius:12px" alt="Home Screen" /><br/><sub>Home Screen</sub></td>
+  <td align="center"><img src="ImagesForGithub/phone3.png" width="180" height="360" style="object-fit:cover;border-radius:12px" alt="Workout Plan" /><br/><sub>Workout Plan</sub></td>
+  <td align="center"><img src="ImagesForGithub/Phone4.png" width="180" height="360" style="object-fit:cover;border-radius:12px" alt="AI Coach" /><br/><sub>AI Coach</sub></td>
+</tr></table>
 
 ---
 
