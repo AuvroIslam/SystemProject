@@ -22,26 +22,24 @@ The camera counts your reps in real time and scores your form. You cannot fake i
 
 ## Screenshots
 
-<table align="center">
-  <tr>
-    <td align="center" width="220"><img src="ImagesForGithub/Iphone1.png" width="200" alt="Live Rep Counting" /></td>
-    <td width="16"></td>
-    <td align="center" width="220"><img src="ImagesForGithub/Iphone2.png" width="200" alt="Home Screen" /></td>
-    <td width="16"></td>
-    <td align="center" width="220"><img src="ImagesForGithub/Iphone3.png" width="200" alt="Workout Plan" /></td>
-    <td width="16"></td>
-    <td align="center" width="220"><img src="ImagesForGithub/Iphone4.png" width="200" alt="AI Coach" /></td>
-  </tr>
-  <tr>
-    <td align="center"><sub><b>Live Rep Counting</b></sub></td>
-    <td></td>
-    <td align="center"><sub><b>Home Screen</b></sub></td>
-    <td></td>
-    <td align="center"><sub><b>Workout Plan</b></sub></td>
-    <td></td>
-    <td align="center"><sub><b>AI Coach</b></sub></td>
-  </tr>
-</table>
+<p align="center">
+  <img src="ImagesForGithub/Iphone1.png" width="200" alt="Live Rep Counting" />
+  &nbsp;&nbsp;&nbsp;
+  <img src="ImagesForGithub/Iphone2.png" width="200" alt="Home Screen" />
+  &nbsp;&nbsp;&nbsp;
+  <img src="ImagesForGithub/Iphone3.png" width="200" alt="Workout Plan" />
+  &nbsp;&nbsp;&nbsp;
+  <img src="ImagesForGithub/Iphone4.png" width="200" alt="AI Coach" />
+</p>
+<p align="center">
+  <sub><b>Live Rep Counting</b></sub>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <sub><b>Home Screen</b></sub>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <sub><b>Workout Plan</b></sub>
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <sub><b>AI Coach</b></sub>
+</p>
 
 ---
 
