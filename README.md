@@ -22,24 +22,19 @@ The camera counts your reps in real time and scores your form. You cannot fake i
 
 ## Screenshots
 
-<p align="center">
-  <img src="ImagesForGithub/Iphone1.png" width="200" alt="Live Rep Counting" />
-  &nbsp;&nbsp;&nbsp;
-  <img src="ImagesForGithub/Iphone2.png" width="200" alt="Home Screen" />
-  &nbsp;&nbsp;&nbsp;
-  <img src="ImagesForGithub/Iphone3.png" width="200" alt="Workout Plan" />
-  &nbsp;&nbsp;&nbsp;
-  <img src="ImagesForGithub/Iphone4.png" width="200" alt="AI Coach" />
-</p>
-<p align="center">
-  <sub><b>Live Rep Counting</b></sub>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <sub><b>Home Screen</b></sub>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <sub><b>Workout Plan</b></sub>
-  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-  <sub><b>AI Coach</b></sub>
-</p>
+<table align="center">
+  <tr>
+    <td align="center"><img src="ImagesForGithub/Iphone1.png" width="280" alt="Live Rep Counting" /><br/><sub><b>Live Rep Counting</b></sub></td>
+    <td width="32"></td>
+    <td align="center"><img src="ImagesForGithub/Iphone2.png" width="280" alt="Home Screen" /><br/><sub><b>Home Screen</b></sub></td>
+  </tr>
+  <tr><td colspan="3" height="24"></td></tr>
+  <tr>
+    <td align="center"><img src="ImagesForGithub/Iphone3.png" width="280" alt="Workout Plan" /><br/><sub><b>Workout Plan</b></sub></td>
+    <td width="32"></td>
+    <td align="center"><img src="ImagesForGithub/Iphone4.png" width="280" alt="AI Coach" /><br/><sub><b>AI Coach</b></sub></td>
+  </tr>
+</table>
 
 ---
 
